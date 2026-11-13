@@ -1,13 +1,16 @@
-
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using Shandis.Application;
+using Shandis.Infrastructure;
 using Shandis.Infrastructure.Identity;
 using Shandis.Infrastructure.Persistence;
 using Shandis.Infrastructure.Persistence.Seeders;
 
 var builder = WebApplication.CreateBuilder(args);
+
+//Dependency Injection
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure();
 
 // Data Protection (required by Identity token providers)
 builder.Services.AddDataProtection();

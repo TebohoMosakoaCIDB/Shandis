@@ -167,4 +167,14 @@ public class Memory : Entity
         Status = MemoryStatus.Archived;
         MarkAsUpdated();
     }
+
+    public void UpdateTimeZone(string timeZoneId)
+    {
+        if (string.IsNullOrWhiteSpace(timeZoneId))
+            throw new ArgumentException("Time zone is required.", nameof(timeZoneId));
+
+        TimeZoneId = timeZoneId.Trim();
+
+        MarkAsUpdated();
+    }
 }
