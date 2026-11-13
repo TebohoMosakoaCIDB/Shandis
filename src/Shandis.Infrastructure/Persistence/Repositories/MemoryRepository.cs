@@ -1,33 +1,42 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+using Microsoft.EntityFrameworkCore;
 using Shandis.Application.Abstractions.Persistence;
 using Shandis.Domain.Entities;
 using Shandis.Domain.Enums;
+using Shandis.Infrastructure.Persistence;
 
 namespace Shandis.Infrastructure.Persistence.Repositories;
 
 public class MemoryRepository : IMemoryRepository
 {
-    private readonly ShandisDbContext _dbContext;
+    private readonly IDbContextFactory<ShandisDbContext> _contextFactory;
 
-    public MemoryRepository(ShandisDbContext dbContext)
+    public MemoryRepository(
+        IDbContextFactory<ShandisDbContext> contextFactory)
     {
-        _dbContext = dbContext;
+        _contextFactory = contextFactory;
     }
 
-    public Task<bool> CategoryExistsAsync(
+    public async Task<bool> CategoryExistsAsync(
         Guid categoryId,
         CancellationToken cancellationToken = default)
     {
-        return _dbContext.MemoryCategories.AnyAsync(
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.MemoryCategories.AnyAsync(
             x => x.Id == categoryId && x.IsActive,
             cancellationToken);
     }
 
-    public Task<bool> PlaceExistsAsync(
+    public async Task<bool> PlaceExistsAsync(
         Guid placeId,
         CancellationToken cancellationToken = default)
     {
-        return _dbContext.Places.AnyAsync(
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.Places.AnyAsync(
             x => x.Id == placeId,
             cancellationToken);
     }
@@ -37,46 +46,46 @@ public class MemoryRepository : IMemoryRepository
         MemoryParticipant ownerParticipant,
         CancellationToken cancellationToken = default)
     {
-        await _dbContext.Memories.AddAsync(memory, cancellationToken);
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
 
-        await _dbContext.MemoryParticipants.AddAsync(
+        await dbContext.Memories.AddAsync(
+            memory,
+            cancellationToken);
+
+        await dbContext.MemoryParticipants.AddAsync(
             ownerParticipant,
             cancellationToken);
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public Task<Memory?> GetByIdAsync(
+    public async Task<Memory?> GetByIdAsync(
         Guid memoryId,
         CancellationToken cancellationToken = default)
     {
-        return _dbContext.Memories
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.Memories
             .AsNoTracking()
             .Include(x => x.Category)
             .Include(x => x.Place)
+            .Include(x => x.Participants)
             .FirstOrDefaultAsync(
                 x => x.Id == memoryId && x.DeletedAtUtc == null,
                 cancellationToken);
     }
 
-    public Task<Memory?> GetTrackedByIdAsync(
-        Guid memoryId,
-        CancellationToken cancellationToken = default)
-    {
-        return _dbContext.Memories
-            .Include(x => x.Category)
-            .Include(x => x.Place)
-            .FirstOrDefaultAsync(
-                x => x.Id == memoryId && x.DeletedAtUtc == null,
-                cancellationToken);
-    }
-
-    public Task<bool> IsActiveParticipantAsync(
+    public async Task<bool> IsActiveParticipantAsync(
         Guid memoryId,
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        return _dbContext.MemoryParticipants.AnyAsync(
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.MemoryParticipants.AnyAsync(
             x => x.MemoryId == memoryId &&
                  x.UserId == userId &&
                  x.Status == ParticipantStatus.Active &&
@@ -90,7 +99,10 @@ public class MemoryRepository : IMemoryRepository
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.Memories
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var query = dbContext.Memories
             .AsNoTracking()
             .Where(memory =>
                 memory.DeletedAtUtc == null &&
@@ -117,9 +129,54 @@ public class MemoryRepository : IMemoryRepository
         return (items, totalCount);
     }
 
-    public Task SaveChangesAsync(
+    public async Task UpdateAsync(
+        Memory memory,
         CancellationToken cancellationToken = default)
     {
-        return _dbContext.SaveChangesAsync(cancellationToken);
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        dbContext.Memories.Attach(memory);
+
+        dbContext.Entry(memory).State = EntityState.Modified;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+
+    public async Task<(IReadOnlyList<Memory> Items, int TotalCount)> GetSharedWithMeAsync(
+        Guid userId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var query = dbContext.Memories
+            .AsNoTracking()
+            .Where(memory =>
+                memory.DeletedAtUtc == null &&
+                memory.Visibility == MemoryVisibility.Private &&
+                memory.Participants.Any(participant =>
+                    participant.UserId == userId &&
+                    participant.Role != ParticipantRole.Owner &&
+                    participant.JoinSource == ParticipantJoinSource.Invitation &&
+                    participant.Status == ParticipantStatus.Active &&
+                    participant.DeletedAtUtc == null));
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .Include(x => x.Category)
+            .Include(x => x.Place)
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .ThenByDescending(x => x.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
 }

@@ -30,4 +30,10 @@ public interface IMemoryService
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+
+    Task<SharedMemoriesResult> GetSharedWithMeAsync(
+        Guid userId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
 }

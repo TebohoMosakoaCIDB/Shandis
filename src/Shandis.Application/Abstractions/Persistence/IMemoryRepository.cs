@@ -1,4 +1,5 @@
-﻿using Shandis.Domain.Entities;
+﻿
+using Shandis.Domain.Entities;
 
 namespace Shandis.Application.Abstractions.Persistence;
 
@@ -21,10 +22,6 @@ public interface IMemoryRepository
         Guid memoryId,
         CancellationToken cancellationToken = default);
 
-    Task<Memory?> GetTrackedByIdAsync(
-        Guid memoryId,
-        CancellationToken cancellationToken = default);
-
     Task<bool> IsActiveParticipantAsync(
         Guid memoryId,
         Guid userId,
@@ -36,6 +33,14 @@ public interface IMemoryRepository
         int pageSize,
         CancellationToken cancellationToken = default);
 
-    Task SaveChangesAsync(
+    Task UpdateAsync(
+        Memory memory,
+        CancellationToken cancellationToken = default);
+
+
+    Task<(IReadOnlyList<Memory> Items, int TotalCount)> GetSharedWithMeAsync(
+        Guid userId,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken = default);
 }

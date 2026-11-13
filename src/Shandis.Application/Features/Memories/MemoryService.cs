@@ -1,4 +1,5 @@
-﻿using Shandis.Application.Abstractions.Persistence;
+﻿
+using Shandis.Application.Abstractions.Persistence;
 using Shandis.Domain.Entities;
 using Shandis.Domain.Enums;
 
@@ -17,30 +18,30 @@ public class MemoryService : IMemoryService
         CreateMemoryCommand command,
         CancellationToken cancellationToken = default)
     {
-        if (command.CategoryId.HasValue)
-        {
-            var categoryExists = await _memoryRepository.CategoryExistsAsync(
+        var categoryTask = command.CategoryId.HasValue
+            ? _memoryRepository.CategoryExistsAsync(
                 command.CategoryId.Value,
-                cancellationToken);
+                cancellationToken)
+            : Task.FromResult(true);
 
-            if (!categoryExists)
-            {
-                throw new InvalidOperationException(
-                    "The selected Memory category does not exist or is inactive.");
-            }
+        var placeTask = command.PlaceId.HasValue
+            ? _memoryRepository.PlaceExistsAsync(
+                command.PlaceId.Value,
+                cancellationToken)
+            : Task.FromResult(true);
+
+        await Task.WhenAll(categoryTask, placeTask);
+
+        if (!await categoryTask)
+        {
+            throw new InvalidOperationException(
+                "The selected Memory category does not exist or is inactive.");
         }
 
-        if (command.PlaceId.HasValue)
+        if (!await placeTask)
         {
-            var placeExists = await _memoryRepository.PlaceExistsAsync(
-                command.PlaceId.Value,
-                cancellationToken);
-
-            if (!placeExists)
-            {
-                throw new InvalidOperationException(
-                    "The selected place does not exist.");
-            }
+            throw new InvalidOperationException(
+                "The selected place does not exist.");
         }
 
         var memory = new Memory(
@@ -86,18 +87,22 @@ public class MemoryService : IMemoryService
         Guid requestingUserId,
         CancellationToken cancellationToken = default)
     {
-        var memory = await _memoryRepository.GetByIdAsync(
+        var memoryTask = _memoryRepository.GetByIdAsync(
             memoryId,
             cancellationToken);
 
+        var participantTask = _memoryRepository.IsActiveParticipantAsync(
+            memoryId,
+            requestingUserId,
+            cancellationToken);
+
+        await Task.WhenAll(memoryTask, participantTask);
+
+        var memory = await memoryTask;
+        var isActiveParticipant = await participantTask;
+
         if (memory is null)
             return null;
-
-        var isActiveParticipant =
-            await _memoryRepository.IsActiveParticipantAsync(
-                memoryId,
-                requestingUserId,
-                cancellationToken);
 
         var isPubliclyVisible =
             memory.Visibility == MemoryVisibility.Public &&
@@ -133,40 +138,37 @@ public class MemoryService : IMemoryService
         UpdateMemoryCommand command,
         CancellationToken cancellationToken = default)
     {
-        var memory = await _memoryRepository.GetTrackedByIdAsync(
+        var memory = await _memoryRepository.GetByIdAsync(
             command.MemoryId,
             cancellationToken);
 
-        if (memory is null)
+        if (memory is null || memory.OwnerId != command.RequestingUserId)
             return null;
 
-        if (memory.OwnerId != command.RequestingUserId)
-            return null;
-
-        if (command.CategoryId.HasValue)
-        {
-            var categoryExists = await _memoryRepository.CategoryExistsAsync(
+        var categoryTask = command.CategoryId.HasValue
+            ? _memoryRepository.CategoryExistsAsync(
                 command.CategoryId.Value,
-                cancellationToken);
+                cancellationToken)
+            : Task.FromResult(true);
 
-            if (!categoryExists)
-            {
-                throw new InvalidOperationException(
-                    "The selected Memory category does not exist or is inactive.");
-            }
+        var placeTask = command.PlaceId.HasValue
+            ? _memoryRepository.PlaceExistsAsync(
+                command.PlaceId.Value,
+                cancellationToken)
+            : Task.FromResult(true);
+
+        await Task.WhenAll(categoryTask, placeTask);
+
+        if (!await categoryTask)
+        {
+            throw new InvalidOperationException(
+                "The selected Memory category does not exist or is inactive.");
         }
 
-        if (command.PlaceId.HasValue)
+        if (!await placeTask)
         {
-            var placeExists = await _memoryRepository.PlaceExistsAsync(
-                command.PlaceId.Value,
-                cancellationToken);
-
-            if (!placeExists)
-            {
-                throw new InvalidOperationException(
-                    "The selected place does not exist.");
-            }
+            throw new InvalidOperationException(
+                "The selected place does not exist.");
         }
 
         memory.UpdateDetails(
@@ -179,7 +181,9 @@ public class MemoryService : IMemoryService
 
         memory.UpdateTimeZone(command.TimeZoneId);
 
-        await _memoryRepository.SaveChangesAsync(cancellationToken);
+        await _memoryRepository.UpdateAsync(
+            memory,
+            cancellationToken);
 
         return new UpdateMemoryResult
         {
@@ -210,7 +214,7 @@ public class MemoryService : IMemoryService
         Guid requestingUserId,
         CancellationToken cancellationToken = default)
     {
-        var memory = await _memoryRepository.GetTrackedByIdAsync(
+        var memory = await _memoryRepository.GetByIdAsync(
             memoryId,
             cancellationToken);
 
@@ -219,7 +223,9 @@ public class MemoryService : IMemoryService
 
         memory.Archive();
 
-        await _memoryRepository.SaveChangesAsync(cancellationToken);
+        await _memoryRepository.UpdateAsync(
+            memory,
+            cancellationToken);
 
         return true;
     }
@@ -229,7 +235,7 @@ public class MemoryService : IMemoryService
         Guid requestingUserId,
         CancellationToken cancellationToken = default)
     {
-        var memory = await _memoryRepository.GetTrackedByIdAsync(
+        var memory = await _memoryRepository.GetByIdAsync(
             memoryId,
             cancellationToken);
 
@@ -238,7 +244,9 @@ public class MemoryService : IMemoryService
 
         memory.MarkAsDeleted();
 
-        await _memoryRepository.SaveChangesAsync(cancellationToken);
+        await _memoryRepository.UpdateAsync(
+            memory,
+            cancellationToken);
 
         return true;
     }
@@ -250,7 +258,9 @@ public class MemoryService : IMemoryService
         CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
-            throw new ArgumentException("A valid user ID is required.", nameof(userId));
+            throw new ArgumentException(
+                "A valid user ID is required.",
+                nameof(userId));
 
         if (page < 1)
             throw new ArgumentOutOfRangeException(
@@ -299,4 +309,76 @@ public class MemoryService : IMemoryService
             TotalCount = totalCount
         };
     }
+
+
+    public async Task<SharedMemoriesResult> GetSharedWithMeAsync(
+        Guid userId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException(
+                "A valid user ID is required.",
+                nameof(userId));
+
+        if (page < 1)
+            throw new ArgumentOutOfRangeException(
+                nameof(page),
+                "Page must be greater than zero.");
+
+        if (pageSize < 1 || pageSize > 50)
+            throw new ArgumentOutOfRangeException(
+                nameof(pageSize),
+                "Page size must be between 1 and 50.");
+
+        var (memories, totalCount) =
+            await _memoryRepository.GetSharedWithMeAsync(
+                userId,
+                page,
+                pageSize,
+                cancellationToken);
+
+        var items = memories.Select(memory =>
+        {
+            var participant = memory.Participants
+                .First(x =>
+                    x.UserId == userId &&
+                    x.Role != ParticipantRole.Owner &&
+                    x.JoinSource == ParticipantJoinSource.Invitation &&
+                    x.Status == ParticipantStatus.Active &&
+                    x.DeletedAtUtc == null);
+
+            return new SharedMemoryItemResult
+            {
+                Id = memory.Id,
+                Title = memory.Title,
+                Description = memory.Description,
+                OwnerId = memory.OwnerId,
+                CategoryId = memory.CategoryId,
+                CategoryName = memory.Category?.Name,
+                PlaceId = memory.PlaceId,
+                PlaceName = memory.Place?.Name,
+                Visibility = memory.Visibility,
+                ContributionPolicy = memory.ContributionPolicy,
+                Status = memory.Status,
+                MyRole = participant.Role,
+                StartDateUtc = memory.StartDateUtc,
+                EndDateUtc = memory.EndDateUtc,
+                TimeZoneId = memory.TimeZoneId,
+                CoverMediaId = memory.CoverMediaId,
+                CreatedAtUtc = memory.CreatedAtUtc,
+                PublishedAtUtc = memory.PublishedAtUtc
+            };
+        }).ToList();
+
+        return new SharedMemoriesResult
+        {
+            Items = items,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount
+        };
+    }
+
 }

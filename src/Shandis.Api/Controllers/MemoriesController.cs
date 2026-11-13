@@ -324,4 +324,67 @@ public class MemoriesController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+
+
+    [HttpGet("shared-with-me")]
+    [ProducesResponseType(typeof(SharedMemoriesResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<SharedMemoriesResponse>> GetSharedWithMe(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdValue, out var userId))
+            return Unauthorized();
+
+        try
+        {
+            var result = await _memoryService.GetSharedWithMeAsync(
+                userId,
+                page,
+                pageSize,
+                cancellationToken);
+
+            var response = new SharedMemoriesResponse
+            {
+                Page = result.Page,
+                PageSize = result.PageSize,
+                TotalCount = result.TotalCount,
+                TotalPages = result.TotalPages,
+
+                Items = result.Items.Select(memory => new SharedMemoryItemResponse
+                {
+                    Id = memory.Id,
+                    Title = memory.Title,
+                    Description = memory.Description,
+                    OwnerId = memory.OwnerId,
+                    CategoryId = memory.CategoryId,
+                    CategoryName = memory.CategoryName,
+                    PlaceId = memory.PlaceId,
+                    PlaceName = memory.PlaceName,
+                    Visibility = memory.Visibility,
+                    ContributionPolicy = memory.ContributionPolicy,
+                    Status = memory.Status,
+                    MyRole = memory.MyRole,
+                    StartDateUtc = memory.StartDateUtc,
+                    EndDateUtc = memory.EndDateUtc,
+                    TimeZoneId = memory.TimeZoneId,
+                    CoverMediaId = memory.CoverMediaId,
+                    CreatedAtUtc = memory.CreatedAtUtc,
+                    PublishedAtUtc = memory.PublishedAtUtc
+                }).ToList()
+            };
+
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+
 }

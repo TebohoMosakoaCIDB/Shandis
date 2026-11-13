@@ -16,7 +16,7 @@ builder.Services.AddInfrastructure();
 builder.Services.AddDataProtection();
 
 // Database
-builder.Services.AddDbContext<ShandisDbContext>(options =>
+builder.Services.AddDbContextFactory<ShandisDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
