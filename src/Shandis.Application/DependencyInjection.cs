@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Shandis.Application.Features.Invitations;
 using Shandis.Application.Features.Memories;
 
 namespace Shandis.Application
@@ -9,6 +10,7 @@ namespace Shandis.Application
             this IServiceCollection services)
         {
             services.AddScoped<IMemoryService, MemoryService>();
+            services.AddScoped<IInvitationService, InvitationService>();
 
             return services;
         }

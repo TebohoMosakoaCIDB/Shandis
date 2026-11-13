@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Shandis.Application.Abstractions.Email;
 using Shandis.Application.Abstractions.Persistence;
 using Shandis.Infrastructure.Persistence.Repositories;
+using Shandis.Infrastructure.Services;
 
 namespace Shandis.Infrastructure
 {
@@ -10,6 +12,8 @@ namespace Shandis.Infrastructure
             this IServiceCollection services)
         {
             services.AddScoped<IMemoryRepository, MemoryRepository>();
+            services.AddScoped<IInvitationRepository, InvitationRepository>();
+            services.AddScoped<IEmailService, LoggingEmailService>();
 
             return services;
         }
