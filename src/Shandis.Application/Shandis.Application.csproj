@@ -9,7 +9,6 @@
     <Folder Include="Memories\" />
     <Folder Include="Moments\" />
     <Folder Include="Discovery\" />
-    <Folder Include="Features\" />
     <Folder Include="Timeline\" />
     <Folder Include="Participation\" />
   </ItemGroup>
