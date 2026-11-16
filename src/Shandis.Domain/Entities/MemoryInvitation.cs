@@ -1,5 +1,4 @@
-﻿
-using Shandis.Domain.Common;
+﻿using Shandis.Domain.Common;
 using Shandis.Domain.Enums;
 
 namespace Shandis.Domain.Entities;
@@ -66,8 +65,7 @@ public class MemoryInvitation : Entity
 
         if (ExpiresAtUtc <= DateTime.UtcNow)
         {
-            Status = InvitationStatus.Expired;
-            MarkAsUpdated();
+            Expire();
             throw new InvalidOperationException("This invitation has expired.");
         }
 
@@ -94,9 +92,22 @@ public class MemoryInvitation : Entity
         MarkAsUpdated();
     }
 
+    public void Expire()
+    {
+        EnsurePending();
+
+        if (ExpiresAtUtc > DateTime.UtcNow)
+            throw new InvalidOperationException(
+                "An invitation cannot expire before its expiry date.");
+
+        Status = InvitationStatus.Expired;
+        MarkAsUpdated();
+    }
+
     private void EnsurePending()
     {
         if (Status != InvitationStatus.Pending)
-            throw new InvalidOperationException("Only pending invitations can be changed.");
+            throw new InvalidOperationException(
+                "Only pending invitations can be changed.");
     }
 }

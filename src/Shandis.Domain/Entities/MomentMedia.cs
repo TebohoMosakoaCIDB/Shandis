@@ -31,14 +31,14 @@ public class MomentMedia : Entity
     }
 
     public MomentMedia(
-        Guid momentId,
-        Guid uploadedByUserId,
-        string fileName,
-        string blobName,
-        string contentType,
-        long fileSizeBytes,
-        MediaType mediaType,
-        int sortOrder = 0)
+    Guid momentId,
+    Guid uploadedByUserId,
+    string fileName,
+    string blobName,
+    string contentType,
+    long fileSizeBytes,
+    MediaType mediaType,
+    int sortOrder = 0)
     {
         if (momentId == Guid.Empty)
             throw new ArgumentException("Moment is required.");
@@ -56,13 +56,20 @@ public class MomentMedia : Entity
             throw new ArgumentException("Content type is required.");
 
         if (fileSizeBytes <= 0)
-            throw new ArgumentException("File size must be greater than zero.");
+            throw new ArgumentException(
+                "File size must be greater than zero.");
+
+        if (!Enum.IsDefined(mediaType))
+            throw new ArgumentException("Invalid media type.");
+
+        if (sortOrder < 0)
+            throw new ArgumentOutOfRangeException(nameof(sortOrder));
 
         MomentId = momentId;
         UploadedByUserId = uploadedByUserId;
-        FileName = fileName;
+        FileName = fileName.Trim();
         BlobName = blobName;
-        ContentType = contentType;
+        ContentType = contentType.Trim();
         FileSizeBytes = fileSizeBytes;
         MediaType = mediaType;
         SortOrder = sortOrder;

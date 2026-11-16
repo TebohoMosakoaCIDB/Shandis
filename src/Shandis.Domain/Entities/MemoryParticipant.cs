@@ -77,4 +77,18 @@ public class MemoryParticipant : Entity
         Role = role;
         MarkAsUpdated();
     }
+
+    public void PromoteToContributor()
+    {
+        if (Role == ParticipantRole.Owner)
+            throw new InvalidOperationException("The Memory owner cannot be changed to a Contributor.");
+
+        if (Status == ParticipantStatus.Removed)
+            throw new InvalidOperationException("A removed participant must be reactivated before promotion.");
+
+        Role = ParticipantRole.Contributor;
+        JoinSource = ParticipantJoinSource.Contribution;
+
+        MarkAsUpdated();
+    }
 }

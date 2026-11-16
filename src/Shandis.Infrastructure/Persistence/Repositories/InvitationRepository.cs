@@ -221,4 +221,37 @@ public class InvitationRepository : IInvitationRepository
 
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<int> ExpirePendingInvitationsAsync(
+    Guid? memoryId = null,
+    Guid? userId = null,
+    CancellationToken cancellationToken = default)
+    {
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var now = DateTime.UtcNow;
+
+        var query = dbContext.MemoryInvitations
+            .Where(x =>
+                x.Status == InvitationStatus.Pending &&
+                x.ExpiresAtUtc <= now &&
+                x.DeletedAtUtc == null);
+
+        if (memoryId.HasValue)
+            query = query.Where(x => x.MemoryId == memoryId.Value);
+
+        if (userId.HasValue)
+            query = query.Where(x => x.InvitedUserId == userId.Value);
+
+        var expiredInvitations = await query.ToListAsync(cancellationToken);
+
+        foreach (var invitation in expiredInvitations)
+            invitation.Expire();
+
+        if (expiredInvitations.Count > 0)
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+        return expiredInvitations.Count;
+    }
 }

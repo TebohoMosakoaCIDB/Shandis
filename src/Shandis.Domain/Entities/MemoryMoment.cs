@@ -52,6 +52,12 @@ public class MemoryMoment : Entity
         if (createdByUserId == Guid.Empty)
             throw new ArgumentException("Moment author is required.");
 
+        if (!Enum.IsDefined(momentType))
+            throw new ArgumentException("Invalid Moment type.");
+
+        if (!Enum.IsDefined(sourceType))
+            throw new ArgumentException("Invalid Moment source type.");
+
         MemoryId = memoryId;
         CreatedByUserId = createdByUserId;
         MomentType = momentType;
@@ -66,6 +72,30 @@ public class MemoryMoment : Entity
 
         if (Status == MomentStatus.Published)
             PublishedAtUtc = DateTime.UtcNow;
+    }
+
+    public void AddMedia(MomentMedia media)
+    {
+        ArgumentNullException.ThrowIfNull(media);
+
+        if (Status is MomentStatus.Removed or MomentStatus.Rejected)
+            throw new InvalidOperationException(
+                "Media cannot be added to a removed or rejected Moment.");
+
+        if (media.MomentId != Id)
+            throw new InvalidOperationException(
+                "The media does not belong to this Moment.");
+
+        if (media.UploadedByUserId != CreatedByUserId)
+            throw new InvalidOperationException(
+                "The media uploader must be the Moment author.");
+
+        if (Media.Any(x => x.Id == media.Id))
+            throw new InvalidOperationException(
+                "This media has already been added.");
+
+        Media.Add(media);
+        MarkAsUpdated();
     }
 
     public void UpdateContent(string? title, string? content)
@@ -105,6 +135,9 @@ public class MemoryMoment : Entity
 
     public void Remove()
     {
+        if (Status == MomentStatus.Removed)
+            return;
+
         Status = MomentStatus.Removed;
         MarkAsDeleted();
     }

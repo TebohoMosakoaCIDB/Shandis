@@ -56,4 +56,9 @@ public interface IInvitationRepository
     Task UpdateAsync(
         MemoryInvitation invitation,
         CancellationToken cancellationToken = default);
+
+    Task<int> ExpirePendingInvitationsAsync(
+        Guid? memoryId = null,
+        Guid? userId = null,
+        CancellationToken cancellationToken = default);
 }

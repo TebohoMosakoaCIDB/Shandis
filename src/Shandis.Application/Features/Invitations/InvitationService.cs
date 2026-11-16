@@ -146,6 +146,10 @@ public class InvitationService : IInvitationService
             throw new UnauthorizedAccessException(
                 "Only the Memory owner can view its invitations.");
 
+        await _invitationRepository.ExpirePendingInvitationsAsync(
+            memoryId: memoryId,
+            cancellationToken: cancellationToken);
+
         var invitations = await _invitationRepository.GetForMemoryAsync(
             memoryId,
             cancellationToken);
@@ -167,6 +171,10 @@ public class InvitationService : IInvitationService
         if (string.IsNullOrWhiteSpace(email))
             throw new InvalidOperationException(
                 "The authenticated user's email address could not be found.");
+
+        await _invitationRepository.ExpirePendingInvitationsAsync(
+            userId: userId,
+            cancellationToken: cancellationToken);
 
         var invitations = await _invitationRepository.GetReceivedAsync(
             userId,

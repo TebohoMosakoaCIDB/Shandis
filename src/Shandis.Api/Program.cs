@@ -10,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 //Dependency Injection
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure();
+builder.Services.AddInfrastructure(builder.Configuration);
 
 // Data Protection (required by Identity token providers)
 builder.Services.AddDataProtection();
