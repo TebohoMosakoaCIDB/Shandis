@@ -91,7 +91,7 @@
             }
 
             <div class="composer-footer">
-                <button class="shandis-btn shandis-btn-secondary" @onclick="() => Navigation.NavigateTo($"/memories/{MemoryId}")" disabled="@isSubmitting">Cancel</button>
+                <button class="shandis-btn shandis-btn-secondary" @onclick="Cancel" disabled="@isSubmitting">Cancel</button>
                 <button class="shandis-btn shandis-btn-primary" @onclick="SubmitAsync" disabled="@isSubmitting">
                     @(isSubmitting ? "Sharing…" : "Share Moment ↗")
                 </button>
@@ -242,6 +242,9 @@
             validationMessage = $"You can attach up to {MaxFileCount} files to one Moment.";
         }
     }
+
+    private void Cancel() =>
+        Navigation.NavigateTo($"/memories/{MemoryId}");
 
     private async Task SubmitAsync()
     {
