@@ -1,0 +1,108 @@
+@page "/shared"
+@inject Shandis.Web.Services.ShandisAuthService AuthService
+@inject Shandis.Web.Services.ShandisApiClient ApiClient
+
+<PageTitle>Shared with Me · Shandis</PageTitle>
+
+<div class="shared-page">
+    <header class="shared-heading">
+        <p class="eyebrow">MEMORIES FROM YOUR PEOPLE</p>
+        <h1>Shared with me</h1>
+        <p>Experiences your friends and family have invited you into.</p>
+    </header>
+
+    @if (isLoading)
+    {
+        <div class="shared-state"><span class="loading-pulse"></span><p>Finding memories shared with you…</p></div>
+    }
+    else if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="shared-state"><h2>We couldn't load these memories</h2><p>@errorMessage</p><button class="shandis-btn shandis-btn-secondary" @onclick="LoadAsync">Try again</button></div>
+    }
+    else if (memories.Count == 0)
+    {
+        <div class="shared-state"><span class="empty-symbol">♡</span><h2>Your invitations will appear here.</h2><p>When someone invites you to a private Memory, you'll find it in this collection.</p><a class="shandis-btn shandis-btn-primary" href="/">Back to Home</a></div>
+    }
+    else
+    {
+        <div class="shared-grid">
+            @foreach (var memory in memories)
+            {
+                <a class="shared-memory-card" href="@($"/memories/{memory.Id}")">
+                    <div class="shared-cover tone-@((Math.Abs(memory.Id.GetHashCode()) % 5) + 1)">
+                        <span>✳</span>
+                        <strong>@memory.Title</strong>
+                        <small>SHANDIS MEMORY</small>
+                    </div>
+                    <div class="shared-card-body">
+                        <strong>@memory.Title</strong>
+                        <span>@(memory.PlaceName ?? "Location not set") · @(memory.StartDateUtc?.ToLocalTime().ToString("d MMM yyyy") ?? "Date not set")</span>
+                        @if (!string.IsNullOrWhiteSpace(memory.Description))
+                        {
+                            <p>@memory.Description</p>
+                        }
+                        <small>Shared with you <b>→</b></small>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .shared-page{max-width:1000px;margin:0 auto;padding:10px 0 60px}
+    .eyebrow{margin:0 0 8px;color:var(--shandis-primary);font-size:9px;font-weight:850;letter-spacing:.15em}
+    .shared-heading h1{margin:0;font:850 clamp(28px,4vw,38px) Manrope,sans-serif;letter-spacing:-.045em}
+    .shared-heading>p:last-child{color:var(--shandis-text-muted);font-size:12px;margin:8px 0 28px}
+    .shared-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px}
+    .shared-memory-card{overflow:hidden;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:16px;transition:transform .15s}
+    .shared-memory-card:hover{transform:translateY(-3px)}
+    .shared-cover{height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;color:#49342E;text-align:center}
+    .shared-cover span{font-size:30px}.shared-cover strong{font:850 21px Manrope,sans-serif}.shared-cover small{font-size:8px;font-weight:900;letter-spacing:.2em}
+    .tone-1{background:linear-gradient(135deg,#E9B8A7,#F4D8C2 52%,#C6D6C6)}.tone-2{background:linear-gradient(135deg,#C5D8CD,#E8D5BE 52%,#E4A99A)}.tone-3{background:linear-gradient(135deg,#E7C98E,#F1E2C5 52%,#D3B7C7)}.tone-4{background:linear-gradient(135deg,#B8CFC4,#E6D4B9 52%,#DDA99D)}.tone-5{background:linear-gradient(135deg,#D6B9C8,#EBD4C1 52%,#B8CDC4)}
+    .shared-card-body{display:flex;flex-direction:column;gap:6px;padding:14px}
+    .shared-card-body>strong{font-size:12px}.shared-card-body>span{color:var(--shandis-text-muted);font-size:9px}.shared-card-body p{margin:3px 0;color:var(--shandis-text-muted);font-size:10px;line-height:1.5}.shared-card-body>small{margin-top:7px;color:var(--shandis-primary);font-size:9px;font-weight:800}.shared-card-body b{font-size:14px}
+    .shared-state{min-height:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:17px}
+    .shared-state h2{margin:10px 0 3px;font-size:20px}.shared-state p{max-width:400px;color:var(--shandis-text-muted);font-size:11px;line-height:1.7}
+    .empty-symbol{font-size:36px;color:var(--shandis-primary)}
+    .loading-pulse{width:25px;height:25px;border:3px solid var(--shandis-border);border-top-color:var(--shandis-primary);border-radius:50%;animation:spin .8s linear infinite}
+    @@keyframes spin{to{transform:rotate(360deg)}}
+    @@media(max-width:850px){.shared-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @@media(max-width:520px){.shared-grid{grid-template-columns:1fr}.shared-cover{height:150px}}
+</style>
+
+@code {
+    private List<Shandis.Web.Models.SharedMemoryItem> memories = [];
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await AuthService.InitializeAsync();
+            await LoadAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            var result = await ApiClient.GetSharedMemoriesAsync();
+            memories = result.Items;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Please check that the API is running and try again.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+}
