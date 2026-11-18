@@ -1,23 +1,65 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@inject IJSRuntime JS
 
-<div class="page">
-    <div class="sidebar">
+<div class="shandis-shell">
+    <aside class="shandis-sidebar">
+        <a class="brand-lockup" href="/" aria-label="Shandis home">
+            <span class="brand-mark">s</span>
+            <span class="brand-wordmark">shandis<span>.</span></span>
+        </a>
+
+        <a class="shandis-btn shandis-btn-primary sidebar-create" href="/memories/create">
+            <span class="create-plus">+</span>
+            Create memory
+        </a>
+
         <NavMenu />
-    </div>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        <div class="sidebar-note">
+            <span class="note-spark">✳</span>
+            <p>One experience.<br />Many perspectives.</p>
+            <span class="muted">One collective memory.</span>
         </div>
+    </aside>
 
-        <article class="content px-4">
+    <main class="shandis-main">
+        <header class="shandis-topbar">
+            <div class="mobile-brand">
+                <span class="brand-mark">s</span>
+                <span class="brand-wordmark">shandis<span>.</span></span>
+            </div>
+            <div class="topbar-spacer"></div>
+            <button class="shandis-icon-btn theme-toggle" type="button"
+                    aria-label="Toggle colour theme" title="Toggle light and dark theme"
+                    @onclick="ToggleThemeAsync">
+                <span aria-hidden="true">◐</span>
+            </button>
+            <button class="profile-chip" type="button" aria-label="Your profile">
+                <span class="profile-avatar">TM</span>
+                <span class="profile-name">Your profile</span>
+                <span class="profile-chevron">⌄</span>
+            </button>
+        </header>
+
+        <section class="shandis-content">
             @Body
-        </article>
+        </section>
     </main>
 </div>
 
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+<div class="mobile-create-wrap">
+    <a class="mobile-create-button" href="/memories/create" aria-label="Create a memory">+</a>
 </div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Something went wrong.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">×</span>
+</div>
+
+@code {
+    private async Task ToggleThemeAsync()
+    {
+        await JS.InvokeVoidAsync("shandisTheme.toggle");
+    }
+}
