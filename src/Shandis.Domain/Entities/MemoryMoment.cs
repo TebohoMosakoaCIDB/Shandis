@@ -32,6 +32,9 @@ public class MemoryMoment : Entity
     public ICollection<MomentReaction> Reactions { get; private set; }
         = new List<MomentReaction>();
 
+    public ICollection<MomentComment> Comments { get; private set; }
+        = new List<MomentComment>();
+
     private MemoryMoment()
     {
     }
