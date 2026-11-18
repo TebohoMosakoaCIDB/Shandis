@@ -33,6 +33,10 @@ public class ShandisDbContext
 
     public DbSet<MomentReaction> MomentReactions => Set<MomentReaction>();
 
+    public DbSet<MomentComment> MomentComments => Set<MomentComment>();
+
+    public DbSet<MomentCommentLike> MomentCommentLikes => Set<MomentCommentLike>();
+
     public DbSet<UserFollow> UserFollows => Set<UserFollow>();
 
     public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
