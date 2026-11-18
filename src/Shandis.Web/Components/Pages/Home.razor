@@ -85,7 +85,11 @@
                                 <span class="cover-decoration">✳</span>
                                 <span class="cover-wordmark">SHANDIS</span>
                             }
-                            <span class="cover-scrim"></span>
+                            @if (memory.LatestMoment?.Media.FirstOrDefault() is { } imageMedia &&
+                                 imageMedia.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="cover-scrim"></span>
+                            }
                             <span class="cover-title">@memory.Title</span>
                             <span class="cover-location">
                                 @if (!string.IsNullOrWhiteSpace(memory.PlaceName))
