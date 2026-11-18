@@ -29,7 +29,7 @@
             </div>
             <div class="memory-hero-content">
                 <div class="hero-kicker">
-                    <span>@(memory.Visibility == 0 ? "PRIVATE MEMORY" : "PUBLIC MEMORY")</span>
+                    <span>@(memory.Visibility == 2 ? "PRIVATE MEMORY" : "PUBLIC MEMORY")</span>
                     @if (!string.IsNullOrWhiteSpace(memory.CategoryName))
                     {
                         <span class="hero-category">@memory.CategoryName</span>
@@ -84,7 +84,7 @@
                                     <strong>Shandis contributor</strong>
                                     <span>@(moment.HappenedAtUtc?.ToLocalTime().ToString("d MMM yyyy · HH:mm") ?? moment.CreatedAtUtc.ToLocalTime().ToString("d MMM yyyy · HH:mm"))</span>
                                 </div>
-                                <span class="moment-kind">@(moment.MomentType == 0 ? "MOMENT" : "STORY")</span>
+                                <span class="moment-kind">@(moment.MomentType == 4 ? "STORY" : moment.MomentType == 5 ? "MIXED MOMENT" : "MOMENT")</span>
                             </div>
                             @if (!string.IsNullOrWhiteSpace(moment.Title))
                             {
