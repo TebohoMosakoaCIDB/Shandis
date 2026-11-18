@@ -1,0 +1,265 @@
+@page "/memories/{MemoryId:guid}"
+@inject Shandis.Web.Services.ShandisAuthService AuthService
+@inject Shandis.Web.Services.ShandisApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>@(memory?.Title ?? "Memory") · Shandis</PageTitle>
+
+<div class="memory-details-page">
+    <a class="back-link" href="/memories">← Back to my memories</a>
+
+    @if (isLoading)
+    {
+        <div class="detail-state"><span class="loading-pulse"></span><p>Opening this memory…</p></div>
+    }
+    else if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="detail-state state-error">
+            <h2>@(notFound ? "Memory not found" : "We couldn't open this memory")</h2>
+            <p>@errorMessage</p>
+            <a class="shandis-btn shandis-btn-secondary" href="/memories">Back to my memories</a>
+        </div>
+    }
+    else if (memory is not null)
+    {
+        <section class="memory-hero">
+            <div class="hero-art">
+                <span class="hero-art-spark">✳</span>
+                <span class="hero-art-caption">ONE EXPERIENCE. MANY PERSPECTIVES.</span>
+            </div>
+            <div class="memory-hero-content">
+                <div class="hero-kicker">
+                    <span>@(memory.Visibility == 0 ? "PRIVATE MEMORY" : "PUBLIC MEMORY")</span>
+                    @if (!string.IsNullOrWhiteSpace(memory.CategoryName))
+                    {
+                        <span class="hero-category">@memory.CategoryName</span>
+                    }
+                </div>
+                <h1>@memory.Title</h1>
+                @if (!string.IsNullOrWhiteSpace(memory.Description))
+                {
+                    <p class="hero-description">@memory.Description</p>
+                }
+                <div class="hero-meta">
+                    @if (!string.IsNullOrWhiteSpace(memory.PlaceName))
+                    {
+                        <span>⌖ @memory.PlaceName</span>
+                    }
+                    @if (memory.StartDateUtc.HasValue)
+                    {
+                        <span>◷ @memory.StartDateUtc.Value.ToLocalTime().ToString("d MMMM yyyy")</span>
+                    }
+                    <span>✳ @momentsTotal @(momentsTotal == 1 ? "moment" : "moments")</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="moments-section">
+            <div class="moments-heading">
+                <div>
+                    <p class="eyebrow">THE STORY SO FAR</p>
+                    <h2>Moments</h2>
+                    <p>Every perspective adds something to the memory.</p>
+                </div>
+                <button class="shandis-btn shandis-btn-primary" disabled title="Moment contribution is coming next">＋ Add a moment</button>
+            </div>
+
+            @if (moments.Count == 0)
+            {
+                <div class="moments-empty">
+                    <span>✳</span>
+                    <h3>The first moment is waiting.</h3>
+                    <p>Photos, videos and little stories will live here together.</p>
+                </div>
+            }
+            else
+            {
+                <div class="moments-feed">
+                    @foreach (var moment in moments)
+                    {
+                        <article class="moment-card" @key="moment.Id">
+                            <div class="moment-card-header">
+                                <div class="contributor-avatar">S</div>
+                                <div class="contributor-info">
+                                    <strong>Shandis contributor</strong>
+                                    <span>@(moment.HappenedAtUtc?.ToLocalTime().ToString("d MMM yyyy · HH:mm") ?? moment.CreatedAtUtc.ToLocalTime().ToString("d MMM yyyy · HH:mm"))</span>
+                                </div>
+                                <span class="moment-kind">@(moment.MomentType == 0 ? "MOMENT" : "STORY")</span>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(moment.Title))
+                            {
+                                <h3 class="moment-title">@moment.Title</h3>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(moment.Content))
+                            {
+                                <p class="moment-copy">@moment.Content</p>
+                            }
+                            @if (moment.Media.Count > 0)
+                            {
+                                <div class="moment-media-grid">
+                                    @foreach (var media in moment.Media.OrderBy(item => item.SortOrder))
+                                    {
+                                        @if (media.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <img src="@media.Url" alt="@media.FileName" loading="lazy" />
+                                        }
+                                        else if (media.ContentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <video src="@media.Url" controls preload="metadata"></video>
+                                        }
+                                        else
+                                        {
+                                            <a class="media-download" href="@media.Url" target="_blank" rel="noopener noreferrer">Open @media.FileName ↗</a>
+                                        }
+                                    }
+                                </div>
+                            }
+                            <div class="moment-actions">
+                                <span>♡ @moment.LikeCount @(moment.LikeCount == 1 ? "like" : "likes")</span>
+                                <span>Comments are coming next</span>
+                            </div>
+                        </article>
+                    }
+                </div>
+
+                @if (momentsPage < momentsTotalPages)
+                {
+                    <div class="load-more-wrap">
+                        <button class="shandis-btn shandis-btn-secondary" @onclick="LoadMoreMomentsAsync" disabled="@isLoadingMore">
+                            @(isLoadingMore ? "Loading…" : "Load more moments")
+                        </button>
+                    </div>
+                }
+            }
+        </section>
+    }
+</div>
+
+<style>
+    .memory-details-page{max-width:1080px;margin:0 auto;padding:24px 34px 80px}
+    .back-link{display:inline-block;color:var(--shandis-text-muted);font-size:12px;font-weight:700;margin:0 0 20px}
+    .back-link:hover{color:var(--shandis-primary)}
+    .memory-hero{overflow:hidden;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:22px;box-shadow:var(--shandis-shadow)}
+    .hero-art{height:180px;background:radial-gradient(circle at 75% 20%,rgba(255,255,255,.48),transparent 25%),linear-gradient(120deg,#E7B6A8,#F2D5B9 48%,#B9C9B7);display:flex;align-items:center;justify-content:space-between;padding:28px;color:#70473D}
+    .hero-art-spark{font-size:64px;opacity:.8}
+    .hero-art-caption{font-size:9px;font-weight:900;letter-spacing:.18em}
+    .memory-hero-content{padding:26px 30px 30px}
+    .hero-kicker{display:flex;gap:10px;align-items:center;color:var(--shandis-primary);font-size:9px;font-weight:900;letter-spacing:.12em}
+    .hero-category{color:var(--shandis-text-muted);border-left:1px solid var(--shandis-border);padding-left:10px}
+    .memory-hero h1{font-size:clamp(28px,4vw,42px);font-weight:800;margin:10px 0}
+    .hero-description{max-width:720px;color:var(--shandis-text-muted);line-height:1.7;margin:0}
+    .hero-meta{display:flex;flex-wrap:wrap;gap:18px;color:var(--shandis-text-muted);font-size:11px;margin-top:18px}
+    .moments-section{margin-top:42px}
+    .moments-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:18px}
+    .eyebrow{color:var(--shandis-primary);font-size:10px;font-weight:800;letter-spacing:.15em;margin:0 0 7px}
+    .moments-heading h2{font-size:27px;font-weight:800;margin:0}
+    .moments-heading p:not(.eyebrow){color:var(--shandis-text-muted);font-size:12px;margin:6px 0 0}
+    .moments-feed{display:grid;gap:16px;max-width:780px}
+    .moment-card{background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:18px;padding:20px;box-shadow:var(--shandis-shadow)}
+    .moment-card-header{display:flex;align-items:center;gap:11px}
+    .contributor-avatar{width:39px;height:39px;border-radius:50%;display:grid;place-items:center;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-family:Manrope,sans-serif;font-weight:900}
+    .contributor-info{display:grid;gap:3px;flex:1}
+    .contributor-info strong{font-size:12px}
+    .contributor-info span{font-size:10px;color:var(--shandis-text-muted)}
+    .moment-kind{font-size:8px;font-weight:900;letter-spacing:.12em;color:var(--shandis-text-muted)}
+    .moment-title{font-size:18px;margin:17px 0 7px;font-weight:800}
+    .moment-copy{font-size:13px;line-height:1.7;white-space:pre-wrap;margin:12px 0;color:var(--shandis-text)}
+    .moment-media-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px}
+    .moment-media-grid img,.moment-media-grid video{width:100%;max-height:440px;object-fit:cover;border-radius:12px;background:var(--shandis-surface-muted)}
+    .moment-media-grid img:only-child,.moment-media-grid video:only-child{grid-column:1/-1;max-height:560px}
+    .media-download{padding:18px;border-radius:10px;background:var(--shandis-surface-muted);color:var(--shandis-primary);font-weight:700}
+    .moment-actions{display:flex;gap:20px;border-top:1px solid var(--shandis-border);padding-top:13px;margin-top:15px;color:var(--shandis-text-muted);font-size:11px}
+    .moments-empty,.detail-state{min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:18px}
+    .moments-empty>span{font-size:36px;color:var(--shandis-primary)}
+    .moments-empty h3,.detail-state h2{font-size:20px;margin:8px 0}
+    .moments-empty p,.detail-state p{color:var(--shandis-text-muted);font-size:12px;line-height:1.6}
+    .load-more-wrap{max-width:780px;text-align:center;margin-top:20px}
+    .loading-pulse{width:25px;height:25px;border:3px solid var(--shandis-border);border-top-color:var(--shandis-primary);border-radius:50%;animation:spin .8s linear infinite}
+    @@keyframes spin{to{transform:rotate(360deg)}}
+    @@media(max-width:650px){.memory-details-page{padding:18px 16px 90px}.hero-art{height:125px;padding:18px}.hero-art-spark{font-size:45px}.hero-art-caption{font-size:7px}.memory-hero-content{padding:20px}.moments-heading{align-items:flex-start;flex-direction:column}.moment-card{padding:14px}.moment-media-grid{grid-template-columns:1fr}.hero-meta{gap:10px}}
+</style>
+
+@code {
+    [Parameter] public Guid MemoryId { get; set; }
+
+    private Shandis.Web.Models.MemoryDetails? memory;
+    private List<Shandis.Web.Models.MomentItem> moments = [];
+    private bool isLoading = true;
+    private bool isLoadingMore;
+    private bool notFound;
+    private string? errorMessage;
+    private int momentsPage = 1;
+    private const int PageSize = 20;
+    private int momentsTotal;
+    private int momentsTotalPages;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await AuthService.InitializeAsync();
+            await LoadMemoryAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadMemoryAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        notFound = false;
+
+        try
+        {
+            memory = await ApiClient.GetMemoryAsync(MemoryId);
+            if (memory is null)
+            {
+                notFound = true;
+                errorMessage = "This Memory may have been removed, or you may no longer have access to it.";
+                return;
+            }
+
+            var result = await ApiClient.GetMomentsAsync(MemoryId, 1, PageSize);
+            moments = result.Moments;
+            momentsPage = result.Page;
+            momentsTotal = result.TotalCount;
+            momentsTotalPages = result.TotalPages;
+        }
+        catch (HttpRequestException ex)
+        {
+            notFound = ex.StatusCode == System.Net.HttpStatusCode.NotFound;
+            errorMessage = notFound
+                ? "This Memory could not be found."
+                : ex.StatusCode == System.Net.HttpStatusCode.Forbidden
+                    ? "You don't have permission to view this Memory."
+                    : "Please check that the API is running and try again.";
+        }
+        catch (Exception)
+        {
+            errorMessage = "Something unexpected happened while opening this Memory.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadMoreMomentsAsync()
+    {
+        if (isLoadingMore || momentsPage >= momentsTotalPages)
+            return;
+
+        isLoadingMore = true;
+        try
+        {
+            var result = await ApiClient.GetMomentsAsync(MemoryId, momentsPage + 1, PageSize);
+            moments.AddRange(result.Moments);
+            momentsPage = result.Page;
+        }
+        finally
+        {
+            isLoadingMore = false;
+        }
+    }
+}
