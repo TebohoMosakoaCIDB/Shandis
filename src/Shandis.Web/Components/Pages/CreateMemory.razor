@@ -196,9 +196,10 @@
     private bool isSaving;
     private string? errorMessage;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await AuthService.InitializeAsync();
+        if (firstRender)
+            await AuthService.InitializeAsync();
     }
 
     private async Task CreateAsync()
