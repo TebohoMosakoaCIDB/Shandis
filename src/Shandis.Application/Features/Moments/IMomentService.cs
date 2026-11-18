@@ -30,4 +30,14 @@ public interface IMomentService
         Guid momentId,
         Guid userId,
         CancellationToken cancellationToken = default);
+
+    Task<MomentLikeResult> LikeAsync(
+        Guid momentId,
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
+    Task<MomentLikeResult> UnlikeAsync(
+        Guid momentId,
+        Guid userId,
+        CancellationToken cancellationToken = default);
 }
