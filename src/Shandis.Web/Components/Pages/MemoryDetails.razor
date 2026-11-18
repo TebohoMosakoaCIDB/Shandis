@@ -167,6 +167,10 @@
                                     </button>
                                     <span class="moment-kind">@(moment.MomentType == 4 ? "STORY" : moment.MomentType == 5 ? "MIXED MOMENT" : "MOMENT")</span>
                                 </div>
+                                @if (!string.IsNullOrWhiteSpace(momentActionError))
+                                {
+                                    <p class="moment-action-error">@momentActionError</p>
+                                }
                                 @if (activeCommentsMomentId == moment.Id)
                                 {
                                     <div class="moment-comments">
@@ -344,6 +348,7 @@
     .lightbox-close{position:absolute;top:14px;right:20px;border:0;background:none;color:white;font-size:35px;cursor:pointer}
     .lightbox-nav{position:absolute;top:50%;display:grid;place-items:center;width:38px;height:38px;border:0;border-radius:50%;background:rgba(255,255,255,.92);color:#332A28;font-size:28px;cursor:pointer;transform:translateY(-50%)}
     .lightbox-previous{left:14px}.lightbox-next{right:14px}
+    .moment-action-error{margin:7px 0 0;color:#C34D55;font-size:9px}
     .moment-action{padding:0;border:0;background:transparent;color:var(--shandis-text-muted);font-size:9px;font-weight:750;cursor:pointer}
     .moment-action:hover{color:var(--shandis-primary)}
     .moment-action:disabled{opacity:.55;cursor:wait}
@@ -539,6 +544,7 @@
     private bool commentsLoading;
     private bool isPostingComment;
     private string? commentsError;
+    private string? momentActionError;
 
     private bool CanPostComment => !string.IsNullOrWhiteSpace(newCommentContent);
 
@@ -547,6 +553,7 @@
         if (!busyMomentIds.Add(moment.Id))
             return;
 
+        momentActionError = null;
         try
         {
             var result = moment.IsLikedByCurrentUser
@@ -558,7 +565,7 @@
         }
         catch (Exception)
         {
-            errorMessage = "We couldn't update your like. Please try again.";
+            momentActionError = "We couldn't update your like. Please try again.";
         }
         finally
         {
