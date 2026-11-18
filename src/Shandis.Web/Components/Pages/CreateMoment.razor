@@ -53,7 +53,7 @@
             @if (selectedMomentType != 4)
             {
                 <div class="composer-field">
-                    <label>Photos or videos <span>@(selectedMomentType == 5 ? "Optional" : "Required") · Up to 10 files, 50 MB each</span></label>
+                    <label>Photos or videos <span>@(selectedMomentType == 5 ? "Optional" : "Required") · Up to 10 files · 50 MB each · 95 MB total</span></label>
                     <label class="upload-zone" for="moment-files">
                         <span class="upload-symbol">＋</span>
                         <strong>Select @(selectedMomentType == 1 ? "photos" : selectedMomentType == 2 ? "videos" : "photos or videos")</strong>
@@ -153,6 +153,7 @@
     private List<IBrowserFile> selectedFiles = [];
 
     private const long MaxFileSize = 50 * 1024 * 1024;
+    private const long MaxTotalUploadSize = 95 * 1024 * 1024;
     private const int MaxFileCount = 10;
 
     private string AcceptedFiles => selectedMomentType switch
@@ -202,6 +203,12 @@
             if (files.Count > MaxFileCount)
             {
                 validationMessage = $"You can attach up to {MaxFileCount} files to one Moment.";
+                return;
+            }
+
+            if (files.Sum(file => file.Size) > MaxTotalUploadSize)
+            {
+                validationMessage = "The combined size of your files cannot exceed 95 MB.";
                 return;
             }
 
