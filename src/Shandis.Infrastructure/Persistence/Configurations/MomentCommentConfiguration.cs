@@ -11,26 +11,13 @@ public class MomentCommentConfiguration : IEntityTypeConfiguration<MomentComment
     {
         builder.ToTable("MomentComments");
         builder.HasKey(x => x.Id);
-
-        builder.Property(x => x.Content)
-            .HasMaxLength(MomentComment.MaxContentLength)
-            .IsRequired();
-
-        builder.HasOne(x => x.Moment)
-            .WithMany(x => x.Comments)
-            .HasForeignKey(x => x.MomentId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne(x => x.ParentComment)
-            .WithMany(x => x.Replies)
-            .HasForeignKey(x => x.ParentCommentId)
+        builder.Property(x => x.Content).HasMaxLength(MomentComment.MaxContentLength).IsRequired();
+        builder.HasOne(x => x.Moment).WithMany(x => x.Comments)
+            .HasForeignKey(x => x.MomentId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne(x => x.ParentComment).WithMany(x => x.Replies)
+            .HasForeignKey(x => x.ParentCommentId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ShandisUser>().WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasOne<ShandisUser>()
-            .WithMany()
-            .HasForeignKey(x => x.UserId)
-            .OnDelete(DeleteBehavior.Restrict);
-
         builder.HasIndex(x => new { x.MomentId, x.ParentCommentId, x.CreatedAtUtc });
         builder.HasIndex(x => x.ParentCommentId);
         builder.HasIndex(x => x.UserId);
