@@ -1,0 +1,311 @@
+@page "/memories/{MemoryId:guid}/moments/create"
+@inject Shandis.Web.Services.ShandisAuthService AuthService
+@inject Shandis.Web.Services.ShandisApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Add a Moment · Shandis</PageTitle>
+
+<div class="create-moment-page">
+    <a class="back-link" href="@($"/memories/{MemoryId}")">← Back to Memory</a>
+
+    @if (isLoading)
+    {
+        <div class="composer-state"><span class="loading-pulse"></span><p>Opening your Memory…</p></div>
+    }
+    else if (!string.IsNullOrWhiteSpace(loadError))
+    {
+        <div class="composer-state">
+            <h2>We couldn't open this Memory</h2>
+            <p>@loadError</p>
+            <a class="shandis-btn shandis-btn-secondary" href="/memories">Back to My Memories</a>
+        </div>
+    }
+    else if (memory is not null)
+    {
+        <header class="composer-heading">
+            <p class="eyebrow">ADD YOUR PERSPECTIVE</p>
+            <h1>Create a Moment</h1>
+            <p>Share a photo, a video or a little story with everyone in <strong>@memory.Title</strong>.</p>
+        </header>
+
+        <section class="composer-card">
+            <div class="composer-type">
+                <label for="moment-type">What would you like to share?</label>
+                <select id="moment-type" @bind="selectedMomentType" @bind:after="OnMomentTypeChanged">
+                    <option value="1">Photo Moment</option>
+                    <option value="2">Video Moment</option>
+                    <option value="4">Story (text only)</option>
+                    <option value="5">Mixed Moment (text and media)</option>
+                </select>
+            </div>
+
+            <div class="composer-field">
+                <label for="moment-title">Title <span>Optional</span></label>
+                <input id="moment-title" @bind="title" maxlength="200" placeholder="Give this moment a title" />
+            </div>
+
+            <div class="composer-field">
+                <label for="moment-content">Your story <span>@(selectedMomentType == 4 ? "Required" : "Optional")</span></label>
+                <textarea id="moment-content" @bind="content" @bind:event="oninput" rows="5" maxlength="10000"
+                          placeholder="What happened? What made this moment special?"></textarea>
+            </div>
+
+            @if (selectedMomentType != 4)
+            {
+                <div class="composer-field">
+                    <label>Photos or videos <span>@(selectedMomentType == 5 ? "Optional" : "Required") · Up to 10 files, 50 MB each</span></label>
+                    <label class="upload-zone" for="moment-files">
+                        <span class="upload-symbol">＋</span>
+                        <strong>Select @(selectedMomentType == 1 ? "photos" : selectedMomentType == 2 ? "videos" : "photos or videos")</strong>
+                        <span>@(selectedMomentType == 1 ? "JPG, PNG, WEBP or GIF" : selectedMomentType == 2 ? "MP4, WEBM or MOV" : "Images and videos")</span>
+                        <InputFile id="moment-files" OnChange="HandleFilesSelected" multiple accept="@AcceptedFiles" />
+                    </label>
+
+                    @if (selectedFiles.Count > 0)
+                    {
+                        <div class="selected-files">
+                            @foreach (var file in selectedFiles)
+                            {
+                                <div class="selected-file" @key="file.Name">
+                                    <span class="file-symbol">@(file.ContentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) ? "▶" : "▧")</span>
+                                    <span class="file-name">@file.Name</span>
+                                    <span class="file-size">@FormatFileSize(file.Size)</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(validationMessage))
+            {
+                <div class="composer-message composer-validation">@validationMessage</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="composer-message composer-error">@errorMessage</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(successMessage))
+            {
+                <div class="composer-message composer-success">@successMessage</div>
+            }
+
+            <div class="composer-footer">
+                <button class="shandis-btn shandis-btn-secondary" @onclick="() => Navigation.NavigateTo($"/memories/{MemoryId}")" disabled="@isSubmitting">Cancel</button>
+                <button class="shandis-btn shandis-btn-primary" @onclick="SubmitAsync" disabled="@isSubmitting">
+                    @(isSubmitting ? "Sharing…" : "Share Moment ↗")
+                </button>
+            </div>
+            <p class="composer-note">Your Moment will follow this Memory's contribution and approval settings.</p>
+        </section>
+    }
+</div>
+
+<style>
+    .create-moment-page{max-width:760px;margin:0 auto;padding:12px 24px 80px}
+    .back-link{display:inline-block;margin-bottom:20px;color:var(--shandis-text-muted);font-size:11px;font-weight:700}
+    .back-link:hover{color:var(--shandis-primary)}
+    .composer-heading{margin-bottom:22px}
+    .eyebrow{margin:0 0 7px;color:var(--shandis-primary);font-size:9px;font-weight:900;letter-spacing:.15em}
+    .composer-heading h1{margin:0;font:850 clamp(28px,4vw,38px) Manrope,sans-serif;letter-spacing:-.045em}
+    .composer-heading>p:last-child{margin:8px 0 0;color:var(--shandis-text-muted);font-size:12px;line-height:1.6}
+    .composer-heading strong{color:var(--shandis-text)}
+    .composer-card{padding:25px;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:18px;box-shadow:var(--shandis-shadow)}
+    .composer-field,.composer-type{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+    .composer-field>label,.composer-type>label{display:flex;justify-content:space-between;gap:10px;color:var(--shandis-text);font-size:11px;font-weight:800}
+    .composer-field>label span{color:var(--shandis-text-muted);font-size:9px;font-weight:600}
+    .composer-field input,.composer-field textarea,.composer-type select{width:100%;padding:12px 13px;border:1px solid var(--shandis-border);border-radius:10px;background:var(--shandis-surface);color:var(--shandis-text);font:inherit;font-size:11px;outline:none}
+    .composer-field textarea{resize:vertical;min-height:110px;line-height:1.6}
+    .composer-field input:focus,.composer-field textarea:focus,.composer-type select:focus{border-color:var(--shandis-primary)}
+    .upload-zone{position:relative;display:flex;min-height:150px;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:20px;border:1px dashed var(--shandis-border);border-radius:13px;background:var(--shandis-surface-muted);text-align:center;cursor:pointer}
+    .upload-zone:hover{border-color:var(--shandis-primary);background:var(--shandis-primary-soft)}
+    .upload-zone input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+    .upload-symbol{display:grid;place-items:center;width:35px;height:35px;border-radius:50%;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:23px}
+    .upload-zone strong{font-size:11px}.upload-zone>span:last-of-type{color:var(--shandis-text-muted);font-size:9px}
+    .selected-files{display:grid;gap:6px;margin-top:10px}
+    .selected-file{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--shandis-border);border-radius:9px;font-size:9px}
+    .file-symbol{color:var(--shandis-primary);font-size:13px}.file-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}.file-size{color:var(--shandis-text-muted)}
+    .composer-message{margin:12px 0;padding:11px 13px;border-radius:9px;font-size:10px;line-height:1.5}
+    .composer-validation,.composer-error{background:rgba(196,77,85,.08);color:#C34D55}
+    .composer-success{background:rgba(75,140,100,.1);color:#397A53}
+    .composer-footer{display:flex;justify-content:flex-end;gap:9px;margin-top:24px;padding-top:17px;border-top:1px solid var(--shandis-border)}
+    .composer-note{margin:12px 0 0;color:var(--shandis-text-muted);font-size:9px;text-align:right}
+    .composer-state{min-height:250px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;border:1px solid var(--shandis-border);border-radius:16px;background:var(--shandis-surface);text-align:center}
+    .composer-state h2{margin:8px 0;font-size:19px}.composer-state p{color:var(--shandis-text-muted);font-size:11px}
+    .loading-pulse{width:25px;height:25px;border:3px solid var(--shandis-border);border-top-color:var(--shandis-primary);border-radius:50%;animation:spin .8s linear infinite}
+    @@keyframes spin{to{transform:rotate(360deg)}}
+    @@media(max-width:600px){.create-moment-page{padding:10px 14px 75px}.composer-card{padding:17px}.composer-footer{flex-direction:column-reverse}.composer-footer button{width:100%}.composer-note{text-align:left}}
+</style>
+
+@code {
+    [Parameter] public Guid MemoryId { get; set; }
+
+    private Shandis.Web.Models.MemoryDetails? memory;
+    private bool isLoading = true;
+    private bool isSubmitting;
+    private string? loadError;
+    private string? errorMessage;
+    private string? validationMessage;
+    private string? successMessage;
+    private string? title;
+    private string? content;
+    private int selectedMomentType = 1;
+    private List<IBrowserFile> selectedFiles = [];
+
+    private const long MaxFileSize = 50 * 1024 * 1024;
+    private const int MaxFileCount = 10;
+
+    private string AcceptedFiles => selectedMomentType switch
+    {
+        1 => ".jpg,.jpeg,.png,.webp,.gif",
+        2 => ".mp4,.webm,.mov",
+        _ => ".jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov"
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        await AuthService.InitializeAsync();
+        try
+        {
+            memory = await ApiClient.GetMemoryAsync(MemoryId);
+            if (memory is null)
+                loadError = "This Memory could not be found or you no longer have access to it.";
+        }
+        catch (Exception)
+        {
+            loadError = "Please check that the API is running and that you have access to this Memory.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnMomentTypeChanged()
+    {
+        selectedFiles.Clear();
+        validationMessage = null;
+        errorMessage = null;
+    }
+
+    private void HandleFilesSelected(InputFileChangeEventArgs args)
+    {
+        validationMessage = null;
+        errorMessage = null;
+
+        try
+        {
+            var files = args.GetMultipleFiles(MaxFileCount);
+            if (files.Count > MaxFileCount)
+            {
+                validationMessage = $"You can attach up to {MaxFileCount} files to one Moment.";
+                return;
+            }
+
+            foreach (var file in files)
+            {
+                if (file.Size <= 0 || file.Size > MaxFileSize)
+                {
+                    validationMessage = $"'{file.Name}' is larger than the 50 MB limit or is empty.";
+                    return;
+                }
+
+                var isImage = file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+                var isVideo = file.ContentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
+
+                if (selectedMomentType == 1 && !isImage)
+                {
+                    validationMessage = "Photo Moments can contain image files only.";
+                    return;
+                }
+
+                if (selectedMomentType == 2 && !isVideo)
+                {
+                    validationMessage = "Video Moments can contain video files only.";
+                    return;
+                }
+
+                if (selectedMomentType == 5 && !isImage && !isVideo)
+                {
+                    validationMessage = "Mixed Moments support image and video files only.";
+                    return;
+                }
+            }
+
+            selectedFiles = files.ToList();
+        }
+        catch (InvalidOperationException)
+        {
+            validationMessage = $"You can attach up to {MaxFileCount} files to one Moment.";
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        validationMessage = null;
+        errorMessage = null;
+        successMessage = null;
+
+        if (selectedMomentType == 1 && selectedFiles.Count == 0)
+        {
+            validationMessage = "Select at least one photo for a Photo Moment.";
+            return;
+        }
+
+        if (selectedMomentType == 2 && selectedFiles.Count == 0)
+        {
+            validationMessage = "Select at least one video for a Video Moment.";
+            return;
+        }
+
+        if (selectedMomentType == 4 && string.IsNullOrWhiteSpace(content))
+        {
+            validationMessage = "Write something before sharing your Story.";
+            return;
+        }
+
+        if (selectedMomentType == 5 &&
+            string.IsNullOrWhiteSpace(content) && selectedFiles.Count == 0)
+        {
+            validationMessage = "Add some text or attach media to your Mixed Moment.";
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            await ApiClient.CreateMomentAsync(
+                MemoryId,
+                selectedMomentType,
+                title,
+                content,
+                selectedFiles);
+
+            successMessage = "Your Moment has been shared. Taking you back to the Memory…";
+            await Task.Delay(650);
+            Navigation.NavigateTo($"/memories/{MemoryId}");
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = string.IsNullOrWhiteSpace(ex.Message)
+                ? "We couldn't share your Moment. Please try again."
+                : ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Something went wrong while uploading your Moment. Please try again.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private static string FormatFileSize(long bytes) =>
+        bytes < 1024 * 1024
+            ? $"{Math.Max(1, bytes / 1024)} KB"
+            : $"{bytes / (1024d * 1024d):0.0} MB";
+}
