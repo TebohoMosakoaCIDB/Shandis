@@ -44,4 +44,16 @@ public interface IMomentRepository
         Guid momentId,
         Guid userId,
         CancellationToken cancellationToken = default);
+
+    Task AddCommentAsync(MomentComment comment, CancellationToken cancellationToken = default);
+    Task<MomentComment?> GetCommentByIdAsync(Guid commentId, CancellationToken cancellationToken = default);
+    Task SaveCommentAsync(MomentComment comment, CancellationToken cancellationToken = default);
+    Task<(IReadOnlyList<MomentCommentResult> Comments, int TotalCount)> GetCommentsAsync(
+        Guid momentId, Guid userId, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<MomentCommentResult?> GetCommentResultAsync(
+        Guid commentId, Guid userId, CancellationToken cancellationToken = default);
+    Task SetCommentLikeAsync(
+        Guid commentId, Guid userId, bool isLiked, CancellationToken cancellationToken = default);
+    Task<MomentCommentLikeResult> GetCommentLikeSummaryAsync(
+        Guid commentId, Guid userId, CancellationToken cancellationToken = default);
 }
