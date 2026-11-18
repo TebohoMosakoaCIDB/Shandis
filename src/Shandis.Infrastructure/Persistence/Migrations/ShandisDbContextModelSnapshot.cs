@@ -542,6 +542,77 @@ namespace Shandis.Infrastructure.Persistence.Migrations
                     b.ToTable("MemoryParticipants", (string)null);
                 });
 
+            modelBuilder.Entity("Shandis.Domain.Entities.MomentComment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("MomentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ParentCommentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentCommentId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("MomentId", "ParentCommentId", "CreatedAtUtc");
+
+                    b.ToTable("MomentComments", (string)null);
+                });
+
+            modelBuilder.Entity("Shandis.Domain.Entities.MomentCommentLike", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CommentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("CommentId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("MomentCommentLikes", (string)null);
+                });
+
             modelBuilder.Entity("Shandis.Domain.Entities.MomentMedia", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1020,6 +1091,47 @@ namespace Shandis.Infrastructure.Persistence.Migrations
                     b.Navigation("Memory");
                 });
 
+            modelBuilder.Entity("Shandis.Domain.Entities.MomentComment", b =>
+                {
+                    b.HasOne("Shandis.Domain.Entities.MemoryMoment", "Moment")
+                        .WithMany("Comments")
+                        .HasForeignKey("MomentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Shandis.Domain.Entities.MomentComment", "ParentComment")
+                        .WithMany("Replies")
+                        .HasForeignKey("ParentCommentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Shandis.Infrastructure.Identity.ShandisUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Moment");
+
+                    b.Navigation("ParentComment");
+                });
+
+            modelBuilder.Entity("Shandis.Domain.Entities.MomentCommentLike", b =>
+                {
+                    b.HasOne("Shandis.Domain.Entities.MomentComment", "Comment")
+                        .WithMany("Likes")
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Shandis.Infrastructure.Identity.ShandisUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Comment");
+                });
+
             modelBuilder.Entity("Shandis.Domain.Entities.MomentMedia", b =>
                 {
                     b.HasOne("Shandis.Domain.Entities.MemoryMoment", "Moment")
@@ -1107,9 +1219,18 @@ namespace Shandis.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Shandis.Domain.Entities.MemoryMoment", b =>
                 {
+                    b.Navigation("Comments");
+
                     b.Navigation("Media");
 
                     b.Navigation("Reactions");
+                });
+
+            modelBuilder.Entity("Shandis.Domain.Entities.MomentComment", b =>
+                {
+                    b.Navigation("Likes");
+
+                    b.Navigation("Replies");
                 });
 
             modelBuilder.Entity("Shandis.Domain.Entities.Place", b =>
