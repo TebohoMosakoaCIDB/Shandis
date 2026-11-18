@@ -11,9 +11,15 @@ builder.Services.AddRazorComponents()
 var apiBaseUrl = builder.Configuration["Api:BaseUrl"]
     ?? "http://localhost:5288/";
 
-builder.Services.AddHttpClient<ShandisApiClient>(client =>
+builder.Services.AddHttpClient("ShandisApi", client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl, UriKind.Absolute);
+});
+
+builder.Services.AddScoped(serviceProvider =>
+{
+    var factory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+    return new ShandisApiClient(factory.CreateClient("ShandisApi"));
 });
 
 builder.Services.AddScoped<ShandisAuthService>();
