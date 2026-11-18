@@ -50,7 +50,7 @@
                         <div class="memory-list-content">
                             <div class="memory-list-topline">
                                 <span class="memory-role">@((memory.IsOwner) ? "YOU CREATED THIS" : "YOU CONTRIBUTED")</span>
-                                <span class="visibility-pill">@((memory.Visibility == 0) ? "Private" : "Public")</span>
+                                <span class="visibility-pill">@((memory.Visibility == 2) ? "Private" : "Public")</span>
                             </div>
                             <h2>@memory.Title</h2>
                             @if (!string.IsNullOrWhiteSpace(memory.Description))
