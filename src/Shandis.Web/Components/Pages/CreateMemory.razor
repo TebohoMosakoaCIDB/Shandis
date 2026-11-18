@@ -64,20 +64,18 @@
                 </div>
 
                 <div class="choice-stack">
-                    <label class="choice-card @(model.Visibility == "Private" ? "selected" : "")">
-                        <InputRadioGroup @bind-Value="model.Visibility">
+                    <InputRadioGroup @bind-Value="model.Visibility">
+                        <label class="choice-card @(model.Visibility == "Private" ? "selected" : "")">
                             <InputRadio Value="@("Private")" />
-                        </InputRadioGroup>
-                        <span class="choice-icon">🔒</span>
-                        <span class="choice-copy"><strong>Private</strong><small>Only you and people you invite can see this Memory.</small></span>
-                    </label>
-                    <label class="choice-card @(model.Visibility == "Public" ? "selected" : "")">
-                        <InputRadioGroup @bind-Value="model.Visibility">
+                            <span class="choice-icon">🔒</span>
+                            <span class="choice-copy"><strong>Private</strong><small>Only you and people you invite can see this Memory.</small></span>
+                        </label>
+                        <label class="choice-card @(model.Visibility == "Public" ? "selected" : "")">
                             <InputRadio Value="@("Public")" />
-                        </InputRadioGroup>
-                        <span class="choice-icon">🌍</span>
-                        <span class="choice-copy"><strong>Public</strong><small>Anyone can view this Memory. You control how others contribute.</small></span>
-                    </label>
+                            <span class="choice-icon">🌍</span>
+                            <span class="choice-copy"><strong>Public</strong><small>Anyone can view this Memory. You control how others contribute.</small></span>
+                        </label>
+                    </InputRadioGroup>
                 </div>
 
                 @if (model.Visibility == "Public")
