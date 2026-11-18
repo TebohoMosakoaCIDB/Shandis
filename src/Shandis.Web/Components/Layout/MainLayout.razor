@@ -1,5 +1,7 @@
 @inherits LayoutComponentBase
 @inject IJSRuntime JS
+@inject Shandis.Web.Services.ShandisAuthService AuthService
+@inject NavigationManager Navigation
 
 <div class="shandis-shell">
     <aside class="shandis-sidebar">
@@ -34,11 +36,22 @@
                     @onclick="ToggleThemeAsync">
                 <span aria-hidden="true">◐</span>
             </button>
-            <button class="profile-chip" type="button" aria-label="Your profile">
-                <span class="profile-avatar">TM</span>
-                <span class="profile-name">Your profile</span>
-                <span class="profile-chevron">⌄</span>
-            </button>
+            @if (AuthService.IsAuthenticated)
+            {
+                <button class="profile-chip" type="button" @onclick="LogoutAsync">
+                    <span class="profile-avatar">S</span>
+                    <span class="profile-name">Sign out</span>
+                    <span class="profile-chevron">↗</span>
+                </button>
+            }
+            else
+            {
+                <a class="profile-chip" href="/login">
+                    <span class="profile-avatar">S</span>
+                    <span class="profile-name">Sign in</span>
+                    <span class="profile-chevron">↗</span>
+                </a>
+            }
         </header>
 
         <section class="shandis-content">
@@ -58,8 +71,20 @@
 </div>
 
 @code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await AuthService.InitializeAsync();
+    }
+
     private async Task ToggleThemeAsync()
     {
         await JS.InvokeVoidAsync("shandisTheme.toggle");
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", forceLoad: true);
     }
 }
