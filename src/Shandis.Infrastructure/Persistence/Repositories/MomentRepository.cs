@@ -265,4 +265,205 @@ public class MomentRepository : IMomentRepository
         };
     }
 
+
+    public async Task AddCommentAsync(MomentComment comment, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        dbContext.MomentComments.Add(comment);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<MomentComment?> GetCommentByIdAsync(Guid commentId, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        return await dbContext.MomentComments
+            .AsNoTracking()
+            .Include(x => x.Moment)
+                .ThenInclude(x => x.Memory)
+            .FirstOrDefaultAsync(x => x.Id == commentId && x.DeletedAtUtc == null, cancellationToken);
+    }
+
+    public async Task SaveCommentAsync(MomentComment comment, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        dbContext.MomentComments.Attach(comment);
+        var entry = dbContext.Entry(comment);
+        entry.Property(x => x.Content).IsModified = true;
+        entry.Property(x => x.UpdatedAtUtc).IsModified = true;
+        entry.Property(x => x.DeletedAtUtc).IsModified = true;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<(IReadOnlyList<MomentCommentResult> Comments, int TotalCount)> GetCommentsAsync(
+        Guid momentId, Guid userId, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var query = dbContext.MomentComments.AsNoTracking()
+            .Where(x => x.MomentId == momentId && x.ParentCommentId == null && x.DeletedAtUtc == null);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var topLevel = await query.OrderBy(x => x.CreatedAtUtc)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+
+        var parentIds = topLevel.Select(x => x.Id).ToList();
+        var replies = parentIds.Count == 0
+            ? new List<MomentComment>()
+            : await dbContext.MomentComments.AsNoTracking()
+                .Where(x => x.MomentId == momentId &&
+                            x.ParentCommentId != null &&
+                            parentIds.Contains(x.ParentCommentId.Value) &&
+                            x.DeletedAtUtc == null)
+                .OrderBy(x => x.CreatedAtUtc)
+                .ToListAsync(cancellationToken);
+
+        var all = topLevel.Concat(replies).ToList();
+        var authorIds = all.Select(x => x.UserId).Distinct().ToList();
+        var users = await dbContext.Users.AsNoTracking()
+            .Where(x => authorIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
+
+        var commentIds = all.Select(x => x.Id).ToList();
+        var likeCounts = await dbContext.MomentCommentLikes.AsNoTracking()
+            .Where(x => commentIds.Contains(x.CommentId))
+            .GroupBy(x => x.CommentId)
+            .Select(x => new { Id = x.Key, Count = x.Count() })
+            .ToDictionaryAsync(x => x.Id, x => x.Count, cancellationToken);
+
+        var likedIds = await dbContext.MomentCommentLikes.AsNoTracking()
+            .Where(x => commentIds.Contains(x.CommentId) && x.UserId == userId)
+            .Select(x => x.CommentId)
+            .ToListAsync(cancellationToken);
+
+        MomentCommentResult Map(MomentComment comment)
+        {
+            users.TryGetValue(comment.UserId, out var author);
+            return new MomentCommentResult
+            {
+                Id = comment.Id,
+                MomentId = comment.MomentId,
+                UserId = comment.UserId,
+                ParentCommentId = comment.ParentCommentId,
+                AuthorName = author?.DisplayName ??
+                    (author is null ? "Unknown user" : $"{author.FirstName} {author.LastName}".Trim()),
+                AuthorProfilePictureUrl = author?.ProfilePictureUrl,
+                Content = comment.Content,
+                CreatedAtUtc = comment.CreatedAtUtc,
+                UpdatedAtUtc = comment.UpdatedAtUtc,
+                LikeCount = likeCounts.GetValueOrDefault(comment.Id),
+                IsLikedByCurrentUser = likedIds.Contains(comment.Id)
+            };
+        }
+
+        var repliesByParent = replies.GroupBy(x => x.ParentCommentId!.Value)
+            .ToDictionary(x => x.Key, x => x.ToList());
+
+        var results = topLevel.Select(comment =>
+        {
+            var result = Map(comment);
+            if (repliesByParent.TryGetValue(comment.Id, out var children))
+                result.Replies = children.Select(Map).ToList();
+            return result;
+        }).ToList();
+
+        return (results, totalCount);
+    }
+
+    public async Task<MomentCommentResult?> GetCommentResultAsync(
+        Guid commentId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var comment = await dbContext.MomentComments.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == commentId && x.DeletedAtUtc == null, cancellationToken);
+        if (comment is null) return null;
+
+        var author = await dbContext.Users.AsNoTracking()
+            .Where(x => x.Id == comment.UserId)
+            .Select(x => new { x.DisplayName, x.FirstName, x.LastName, x.ProfilePictureUrl })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var likes = dbContext.MomentCommentLikes.AsNoTracking().Where(x => x.CommentId == commentId);
+        var result = new MomentCommentResult
+        {
+            Id = comment.Id,
+            MomentId = comment.MomentId,
+            UserId = comment.UserId,
+            ParentCommentId = comment.ParentCommentId,
+            AuthorName = author?.DisplayName ??
+                (author is null ? "Unknown user" : $"{author.FirstName} {author.LastName}".Trim()),
+            AuthorProfilePictureUrl = author?.ProfilePictureUrl,
+            Content = comment.Content,
+            CreatedAtUtc = comment.CreatedAtUtc,
+            UpdatedAtUtc = comment.UpdatedAtUtc,
+            LikeCount = await likes.CountAsync(cancellationToken),
+            IsLikedByCurrentUser = await likes.AnyAsync(x => x.UserId == userId, cancellationToken)
+        };
+
+        if (comment.ParentCommentId is null)
+        {
+            var replies = await dbContext.MomentComments.AsNoTracking()
+                .Where(x => x.ParentCommentId == commentId && x.DeletedAtUtc == null)
+                .OrderBy(x => x.CreatedAtUtc).ToListAsync(cancellationToken);
+
+            foreach (var reply in replies)
+            {
+                var replyAuthor = await dbContext.Users.AsNoTracking()
+                    .Where(x => x.Id == reply.UserId)
+                    .Select(x => new { x.DisplayName, x.FirstName, x.LastName, x.ProfilePictureUrl })
+                    .FirstOrDefaultAsync(cancellationToken);
+                var replyLikes = dbContext.MomentCommentLikes.AsNoTracking()
+                    .Where(x => x.CommentId == reply.Id);
+                result.Replies.Add(new MomentCommentResult
+                {
+                    Id = reply.Id,
+                    MomentId = reply.MomentId,
+                    UserId = reply.UserId,
+                    ParentCommentId = reply.ParentCommentId,
+                    AuthorName = replyAuthor?.DisplayName ??
+                        (replyAuthor is null ? "Unknown user" : $"{replyAuthor.FirstName} {replyAuthor.LastName}".Trim()),
+                    AuthorProfilePictureUrl = replyAuthor?.ProfilePictureUrl,
+                    Content = reply.Content,
+                    CreatedAtUtc = reply.CreatedAtUtc,
+                    UpdatedAtUtc = reply.UpdatedAtUtc,
+                    LikeCount = await replyLikes.CountAsync(cancellationToken),
+                    IsLikedByCurrentUser = await replyLikes.AnyAsync(x => x.UserId == userId, cancellationToken)
+                });
+            }
+        }
+
+        return result;
+    }
+
+    public async Task SetCommentLikeAsync(
+        Guid commentId, Guid userId, bool isLiked, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var existing = await dbContext.MomentCommentLikes.FirstOrDefaultAsync(
+            x => x.CommentId == commentId && x.UserId == userId, cancellationToken);
+
+        if (isLiked)
+        {
+            if (existing is null) dbContext.MomentCommentLikes.Add(new MomentCommentLike(commentId, userId));
+        }
+        else if (existing is not null)
+        {
+            dbContext.MomentCommentLikes.Remove(existing);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<MomentCommentLikeResult> GetCommentLikeSummaryAsync(
+        Guid commentId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var likes = dbContext.MomentCommentLikes.AsNoTracking().Where(x => x.CommentId == commentId);
+        return new MomentCommentLikeResult
+        {
+            CommentId = commentId,
+            LikeCount = await likes.CountAsync(cancellationToken),
+            IsLikedByCurrentUser = await likes.AnyAsync(x => x.UserId == userId, cancellationToken)
+        };
+    }
+
 }
