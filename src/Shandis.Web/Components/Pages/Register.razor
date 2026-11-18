@@ -1,0 +1,92 @@
+@page "/register"
+@layout AuthLayout
+@using Shandis.Web.Models
+@using Shandis.Web.Services
+@inject ShandisAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Create account · Shandis</PageTitle>
+
+<section class="auth-card">
+    <p class="eyebrow">MAKE ROOM FOR THE MOMENTS</p>
+    <h1>Your people. Your memories.</h1>
+    <p class="auth-intro">Create your Shandis account and start bringing everyone's perspectives together.</p>
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="auth-alert" role="alert">@errorMessage</div>
+    }
+
+    @if (registrationComplete)
+    {
+        <div class="auth-success" role="status">
+            Your account has been created. You can now sign in.
+        </div>
+        <a class="shandis-btn shandis-btn-primary auth-submit" href="/login">Continue to sign in</a>
+    }
+    else
+    {
+        <EditForm Model="model" OnValidSubmit="HandleRegisterAsync">
+            <DataAnnotationsValidator />
+            <div class="auth-field">
+                <label for="email">Email address</label>
+                <InputText id="email" @bind-Value="model.Email" type="email"
+                           autocomplete="email" placeholder="you@example.com" />
+                <ValidationMessage For="@(() => model.Email)" />
+            </div>
+
+            <div class="auth-field">
+                <label for="password">Password</label>
+                <InputText id="password" @bind-Value="model.Password" type="password"
+                           autocomplete="new-password" placeholder="At least 8 characters" />
+                <ValidationMessage For="@(() => model.Password)" />
+            </div>
+
+            <div class="auth-field">
+                <label for="confirmPassword">Confirm password</label>
+                <InputText id="confirmPassword" @bind-Value="model.ConfirmPassword" type="password"
+                           autocomplete="new-password" placeholder="Enter your password again" />
+                <ValidationMessage For="@(() => model.ConfirmPassword)" />
+            </div>
+
+            <button class="shandis-btn shandis-btn-primary auth-submit" type="submit" disabled="@isSubmitting">
+                @(isSubmitting ? "Creating account…" : "Create account")
+            </button>
+        </EditForm>
+    }
+
+    <p class="auth-switch">Already have an account? <a href="/login">Sign in</a></p>
+</section>
+
+@code {
+    private readonly RegisterInputModel model = new();
+    private bool isSubmitting;
+    private bool registrationComplete;
+    private string? errorMessage;
+
+    private async Task HandleRegisterAsync()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await AuthService.RegisterAsync(model.Email, model.Password);
+            if (!result.Success)
+            {
+                errorMessage = result.Error ?? "We couldn't create your account. Please try again.";
+                return;
+            }
+
+            registrationComplete = true;
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "We couldn't reach Shandis right now. Check that the API is running and try again.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}
