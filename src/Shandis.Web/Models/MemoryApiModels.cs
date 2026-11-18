@@ -1,0 +1,88 @@
+using System.Text.Json.Serialization;
+
+namespace Shandis.Web.Models;
+
+public sealed class MyMemoriesResponse
+{
+    public List<MyMemoryItem> Items { get; set; } = [];
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalCount { get; set; }
+    public int TotalPages { get; set; }
+}
+
+public sealed class MyMemoryItem
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public Guid OwnerId { get; set; }
+    public bool IsOwner { get; set; }
+    public string? CategoryName { get; set; }
+    public string? PlaceName { get; set; }
+    public int Visibility { get; set; }
+    public int ContributionPolicy { get; set; }
+    public int Status { get; set; }
+    public DateTime? StartDateUtc { get; set; }
+    public DateTime? EndDateUtc { get; set; }
+    public Guid? CoverMediaId { get; set; }
+}
+
+public sealed class MemoryDetails
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public Guid OwnerId { get; set; }
+    public string? CategoryName { get; set; }
+    public string? PlaceName { get; set; }
+    public string? PlaceAddress { get; set; }
+    public int Visibility { get; set; }
+    public int ContributionPolicy { get; set; }
+    public int Status { get; set; }
+    public DateTime? StartDateUtc { get; set; }
+    public DateTime? EndDateUtc { get; set; }
+    public string TimeZoneId { get; set; } = string.Empty;
+    public Guid? CoverMediaId { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public DateTime? PublishedAtUtc { get; set; }
+}
+
+public sealed class GetMomentsResponse
+{
+    public Guid MemoryId { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalCount { get; set; }
+    public int TotalPages { get; set; }
+    public List<MomentItem> Moments { get; set; } = [];
+}
+
+public sealed class MomentItem
+{
+    public Guid Id { get; set; }
+    public Guid MemoryId { get; set; }
+    public Guid CreatedByUserId { get; set; }
+    public string? Title { get; set; }
+    public string? Content { get; set; }
+    public int MomentType { get; set; }
+    public int SourceType { get; set; }
+    public int Status { get; set; }
+    public DateTime? HappenedAtUtc { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public DateTime? PublishedAtUtc { get; set; }
+    public int LikeCount { get; set; }
+    public bool IsLikedByCurrentUser { get; set; }
+    public List<MomentMediaItem> Media { get; set; } = [];
+}
+
+public sealed class MomentMediaItem
+{
+    public Guid Id { get; set; }
+    public string FileName { get; set; } = string.Empty;
+    public string ContentType { get; set; } = string.Empty;
+    public long FileSizeBytes { get; set; }
+    public int MediaType { get; set; }
+    public int SortOrder { get; set; }
+    public string Url { get; set; } = string.Empty;
+}
