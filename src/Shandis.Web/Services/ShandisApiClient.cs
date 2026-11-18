@@ -65,6 +65,50 @@ public sealed class ShandisApiClient(HttpClient httpClient)
             cancellationToken);
     }
 
+    public async Task<MomentItem> CreateMomentAsync(
+        Guid memoryId,
+        int momentType,
+        string? title,
+        string? content,
+        IReadOnlyCollection<IBrowserFile> media,
+        CancellationToken cancellationToken = default)
+    {
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent(memoryId.ToString()), "MemoryId");
+        form.Add(new StringContent(momentType.ToString()), "MomentType");
+
+        if (!string.IsNullOrWhiteSpace(title))
+            form.Add(new StringContent(title.Trim()), "Title");
+
+        if (!string.IsNullOrWhiteSpace(content))
+            form.Add(new StringContent(content.Trim()), "Content");
+
+        foreach (var file in media)
+        {
+            var stream = file.OpenReadStream(
+                maxAllowedSize: 50 * 1024 * 1024,
+                cancellationToken);
+
+            var fileContent = new StreamContent(stream);
+            fileContent.Headers.ContentType =
+                new MediaTypeHeaderValue(file.ContentType);
+
+            form.Add(fileContent, "Media", file.Name);
+        }
+
+        using var response = await HttpClient.PostAsync(
+            "api/moments",
+            form,
+            cancellationToken);
+
+        await EnsureSuccessAsync(response, cancellationToken);
+
+        return await response.Content.ReadFromJsonAsync<MomentItem>(
+            cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException(
+                "The Shandis API returned an empty Moment response.");
+    }
+
     public async Task<MomentLikeResult> LikeMomentAsync(
         Guid momentId,
         CancellationToken cancellationToken = default)
