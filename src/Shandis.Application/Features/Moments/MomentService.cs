@@ -603,7 +603,7 @@ public class MomentService : IMomentService
             isNewParticipant,
             cancellationToken);
 
-        return await MapResultAsync(moment, cancellationToken);
+        return await MapResultAsync(moment, cancellationToken, userId);
     }
 
     public async Task<CreateMomentResult> RejectAsync(
@@ -628,7 +628,7 @@ public class MomentService : IMomentService
             false,
             cancellationToken);
 
-        return await MapResultAsync(moment, cancellationToken);
+        return await MapResultAsync(moment, cancellationToken, userId);
     }
 
     private async Task<(
