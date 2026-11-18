@@ -65,6 +65,64 @@ public sealed class ShandisApiClient(HttpClient httpClient)
             cancellationToken);
     }
 
+    public async Task<MomentLikeResult> LikeMomentAsync(
+        Guid momentId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await HttpClient.PostAsync(
+            $"api/moments/{momentId}/like",
+            content: null,
+            cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<MomentLikeResult>(
+            cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException("The Shandis API returned an empty like response.");
+    }
+
+    public async Task<MomentLikeResult> UnlikeMomentAsync(
+        Guid momentId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await HttpClient.DeleteAsync(
+            $"api/moments/{momentId}/like",
+            cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<MomentLikeResult>(
+            cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException("The Shandis API returned an empty unlike response.");
+    }
+
+    public async Task<MomentCommentsResponse> GetMomentCommentsAsync(
+        Guid momentId,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        return await GetRequiredAsync<MomentCommentsResponse>(
+            $"api/moments/{momentId}/comments?page={page}&pageSize={pageSize}",
+            cancellationToken);
+    }
+
+    public async Task<MomentCommentItem> CreateMomentCommentAsync(
+        Guid momentId,
+        string content,
+        Guid? parentCommentId = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await HttpClient.PostAsJsonAsync(
+            $"api/moments/{momentId}/comments",
+            new CreateMomentCommentRequest
+            {
+                Content = content,
+                ParentCommentId = parentCommentId
+            },
+            cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<MomentCommentItem>(
+            cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException("The Shandis API returned an empty comment response.");
+    }
+
     private async Task<T> GetRequiredAsync<T>(
         string requestUri,
         CancellationToken cancellationToken)
