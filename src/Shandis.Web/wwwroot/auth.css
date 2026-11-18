@@ -7,14 +7,14 @@
     background:
         radial-gradient(circle at 12% 12%, rgba(224, 126, 105, .12), transparent 30%),
         radial-gradient(circle at 88% 84%, rgba(190, 168, 112, .13), transparent 28%),
-        var(--background);
+        var(--shandis-bg);
 }
 
 .auth-brand {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    color: var(--text);
+    color: var(--shandis-text);
     text-decoration: none;
 }
 
@@ -27,15 +27,15 @@
 
 .auth-card {
     padding: 42px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--shandis-border);
     border-radius: 24px;
-    background: var(--surface);
-    box-shadow: var(--shadow);
+    background: var(--shandis-surface);
+    box-shadow: var(--shandis-shadow);
 }
 
 .auth-card h1 {
     margin: 8px 0 12px;
-    color: var(--text);
+    color: var(--shandis-text);
     font-size: clamp(2rem, 5vw, 2.5rem);
     line-height: 1.12;
     letter-spacing: -.045em;
@@ -43,7 +43,7 @@
 
 .auth-intro {
     margin: 0 0 28px;
-    color: var(--text-muted);
+    color: var(--shandis-text-muted);
     line-height: 1.65;
 }
 
@@ -55,7 +55,7 @@
 }
 
 .auth-field label {
-    color: var(--text);
+    color: var(--shandis-text);
     font-size: .9rem;
     font-weight: 650;
 }
@@ -64,20 +64,20 @@
     width: 100%;
     min-height: 48px;
     padding: 0 14px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--shandis-border);
     border-radius: 12px;
     outline: none;
-    background: var(--surface);
-    color: var(--text);
+    background: var(--shandis-surface);
+    color: var(--shandis-text);
 }
 
 .auth-field input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+    border-color: var(--shandis-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--shandis-primary) 16%, transparent);
 }
 
 .auth-field input::placeholder {
-    color: var(--text-muted);
+    color: var(--shandis-text-muted);
     opacity: .75;
 }
 
@@ -101,13 +101,13 @@
 
 .auth-switch {
     margin: 25px 0 0;
-    color: var(--text-muted);
+    color: var(--shandis-text-muted);
     text-align: center;
     font-size: .92rem;
 }
 
 .auth-switch a {
-    color: var(--primary);
+    color: var(--shandis-primary);
     font-weight: 700;
     text-decoration: none;
 }
@@ -130,12 +130,12 @@
 .auth-success {
     border: 1px solid rgba(89, 139, 108, .25);
     background: rgba(89, 139, 108, .1);
-    color: var(--text);
+    color: var(--shandis-text);
 }
 
 .auth-footer {
     margin: 0;
-    color: var(--text-muted);
+    color: var(--shandis-text-muted);
     font-size: .8rem;
     text-align: center;
 }
