@@ -1,0 +1,75 @@
+@page "/login"
+@layout AuthLayout
+@using Shandis.Web.Models
+@using Shandis.Web.Services
+@inject ShandisAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Sign in · Shandis</PageTitle>
+
+<section class="auth-card">
+    <p class="eyebrow">WELCOME BACK</p>
+    <h1>Your memories are waiting.</h1>
+    <p class="auth-intro">Sign in to see the moments you've shared and the memories your people have invited you into.</p>
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="auth-alert" role="alert">@errorMessage</div>
+    }
+
+    <EditForm Model="model" OnValidSubmit="HandleLoginAsync">
+        <DataAnnotationsValidator />
+        <div class="auth-field">
+            <label for="email">Email address</label>
+            <InputText id="email" @bind-Value="model.Email" type="email"
+                       autocomplete="email" placeholder="you@example.com" />
+            <ValidationMessage For="@(() => model.Email)" />
+        </div>
+
+        <div class="auth-field">
+            <label for="password">Password</label>
+            <InputText id="password" @bind-Value="model.Password" type="password"
+                       autocomplete="current-password" placeholder="Enter your password" />
+            <ValidationMessage For="@(() => model.Password)" />
+        </div>
+
+        <button class="shandis-btn shandis-btn-primary auth-submit" type="submit" disabled="@isSubmitting">
+            @(isSubmitting ? "Signing in…" : "Sign in")
+        </button>
+    </EditForm>
+
+    <p class="auth-switch">New to Shandis? <a href="/register">Create an account</a></p>
+</section>
+
+@code {
+    private readonly LoginInputModel model = new();
+    private bool isSubmitting;
+    private string? errorMessage;
+
+    private async Task HandleLoginAsync()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await AuthService.LoginAsync(model.Email, model.Password);
+
+            if (!result.Success)
+            {
+                errorMessage = result.Error ?? "We couldn't sign you in. Please try again.";
+                return;
+            }
+
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "We couldn't reach Shandis right now. Check that the API is running and try again.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}
