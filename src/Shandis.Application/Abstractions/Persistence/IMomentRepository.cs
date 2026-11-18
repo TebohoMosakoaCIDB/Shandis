@@ -1,4 +1,5 @@
-﻿using Shandis.Application.Features.Moments.Results;
+﻿
+using Shandis.Application.Features.Moments.Results;
 using Shandis.Domain.Entities;
 
 namespace Shandis.Application.Abstractions.Persistence;
@@ -32,5 +33,16 @@ public interface IMomentRepository
         MemoryMoment moment,
         MemoryParticipant? participant,
         bool isNewParticipant,
+        CancellationToken cancellationToken = default);
+
+    Task SetLikeAsync(
+        Guid momentId,
+        Guid userId,
+        bool isLiked,
+        CancellationToken cancellationToken = default);
+
+    Task<MomentLikeResult> GetLikeSummaryAsync(
+        Guid momentId,
+        Guid userId,
         CancellationToken cancellationToken = default);
 }

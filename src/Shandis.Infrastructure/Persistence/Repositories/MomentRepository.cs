@@ -206,4 +206,68 @@ public class MomentRepository : IMomentRepository
             throw;
         }
     }
+
+
+    public async Task SetLikeAsync(
+        Guid momentId,
+        Guid userId,
+        bool isLiked,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var existingReaction = await dbContext.MomentReactions
+            .FirstOrDefaultAsync(
+                x => x.MomentId == momentId &&
+                     x.UserId == userId,
+                cancellationToken);
+
+        if (isLiked)
+        {
+            // Idempotent: do not create duplicate likes.
+            if (existingReaction is null)
+            {
+                dbContext.MomentReactions.Add(
+                    new MomentReaction(
+                        momentId,
+                        userId,
+                        ReactionType.Like));
+            }
+        }
+        else if (existingReaction is not null)
+        {
+            dbContext.MomentReactions.Remove(existingReaction);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<MomentLikeResult> GetLikeSummaryAsync(
+        Guid momentId,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var reactions = dbContext.MomentReactions
+            .AsNoTracking()
+            .Where(x =>
+                x.MomentId == momentId &&
+                x.ReactionType == ReactionType.Like);
+
+        var likeCount = await reactions.CountAsync(cancellationToken);
+
+        var isLiked = await reactions.AnyAsync(
+            x => x.UserId == userId,
+            cancellationToken);
+
+        return new MomentLikeResult
+        {
+            MomentId = momentId,
+            LikeCount = likeCount,
+            IsLikedByCurrentUser = isLiked
+        };
+    }
 }
