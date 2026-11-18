@@ -9,7 +9,6 @@ public sealed class ShandisAuthService(
     IJSRuntime js)
 {
     private const string AccessTokenKey = "shandis.access-token";
-    private const string RefreshTokenKey = "shandis.refresh-token";
 
     public bool IsAuthenticated { get; private set; }
 
@@ -34,14 +33,10 @@ public sealed class ShandisAuthService(
         var accessToken = root.TryGetProperty("accessToken", out var access)
             ? access.GetString()
             : null;
-        var refreshToken = root.TryGetProperty("refreshToken", out var refresh)
-            ? refresh.GetString()
-            : null;
-
         if (string.IsNullOrWhiteSpace(accessToken))
             return (false, "The API did not return an access token.");
 
-        await StoreTokensAsync(accessToken, refreshToken);
+        await StoreTokenAsync(accessToken);
         return (true, null);
     }
 
@@ -76,19 +71,14 @@ public sealed class ShandisAuthService(
     public async Task LogoutAsync()
     {
         await js.InvokeVoidAsync("shandisAuth.remove", AccessTokenKey);
-        await js.InvokeVoidAsync("shandisAuth.remove", RefreshTokenKey);
 
         apiClient.SetAccessToken(null);
         IsAuthenticated = false;
     }
 
-    private async Task StoreTokensAsync(string accessToken, string? refreshToken)
+    private async Task StoreTokenAsync(string accessToken)
     {
         await js.InvokeVoidAsync("shandisAuth.set", AccessTokenKey, accessToken);
-
-        if (!string.IsNullOrWhiteSpace(refreshToken))
-            await js.InvokeVoidAsync("shandisAuth.set", RefreshTokenKey, refreshToken);
-
         apiClient.SetAccessToken(accessToken);
         IsAuthenticated = true;
     }
