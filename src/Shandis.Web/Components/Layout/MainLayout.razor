@@ -76,6 +76,13 @@
         if (firstRender)
         {
             await AuthService.InitializeAsync();
+
+            if (!AuthService.IsAuthenticated)
+            {
+                Navigation.NavigateTo("/login", forceLoad: true);
+                return;
+            }
+
             StateHasChanged();
         }
     }
