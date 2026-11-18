@@ -74,7 +74,10 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
+        {
             await AuthService.InitializeAsync();
+            StateHasChanged();
+        }
     }
 
     private async Task ToggleThemeAsync()
