@@ -33,4 +33,15 @@ public interface IMomentRepository
         MemoryParticipant? participant,
         bool isNewParticipant,
         CancellationToken cancellationToken = default);
+
+    Task SetLikeAsync(
+        Guid momentId,
+        Guid userId,
+        bool isLiked,
+        CancellationToken cancellationToken = default);
+
+    Task<MomentLikeResult> GetLikeSummaryAsync(
+        Guid momentId,
+        Guid userId,
+        CancellationToken cancellationToken = default);
 }
