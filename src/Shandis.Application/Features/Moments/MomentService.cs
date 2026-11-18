@@ -377,17 +377,9 @@ public class MomentService : IMomentService
     }
 
     private async Task<CreateMomentResult> MapResultAsync(
-    MemoryMoment moment,
-    CancellationToken cancellationToken,
-    Guid? currentUserId = null)
+        MemoryMoment moment,
+        CancellationToken cancellationToken)
     {
-        var userId = currentUserId ?? moment.CreatedByUserId;
-
-        var likeSummary = await _momentRepository.GetLikeSummaryAsync(
-            moment.Id,
-            userId,
-            cancellationToken);
-
         var result = new CreateMomentResult
         {
             Id = moment.Id,
@@ -400,9 +392,7 @@ public class MomentService : IMomentService
             Status = moment.Status,
             HappenedAtUtc = moment.HappenedAtUtc,
             CreatedAtUtc = moment.CreatedAtUtc,
-            PublishedAtUtc = moment.PublishedAtUtc,
-            LikeCount = likeSummary.LikeCount,
-            IsLikedByCurrentUser = likeSummary.IsLikedByCurrentUser
+            PublishedAtUtc = moment.PublishedAtUtc
         };
 
         foreach (var media in moment.Media.OrderBy(x => x.SortOrder))
@@ -417,6 +407,8 @@ public class MomentService : IMomentService
             }
             catch
             {
+                // The Moment has already been saved. A signed URL can
+                // be generated again when the Moment is retrieved.
                 signedUrl = string.Empty;
             }
 
@@ -501,7 +493,7 @@ public class MomentService : IMomentService
         foreach (var moment in moments)
         {
             result.Moments.Add(
-                await MapResultAsync(moment, cancellationToken, userId));
+                await MapResultAsync(moment, cancellationToken));
         }
 
         return result;
@@ -549,7 +541,7 @@ public class MomentService : IMomentService
                 "You are not allowed to view this Moment.");
         }
 
-        return await MapResultAsync(moment, cancellationToken, userId);
+        return await MapResultAsync(moment, cancellationToken);
     }
 
     private static void EnsureCanViewMemory(
@@ -670,78 +662,4 @@ public class MomentService : IMomentService
 
         return (moment, participant, participant is null);
     }
-
-
-    public async Task<MomentLikeResult> LikeAsync(
-        Guid momentId,
-        Guid userId,
-        CancellationToken cancellationToken = default)
-    {
-        return await SetLikeAsync(
-            momentId,
-            userId,
-            true,
-            cancellationToken);
-    }
-
-    public async Task<MomentLikeResult> UnlikeAsync(
-        Guid momentId,
-        Guid userId,
-        CancellationToken cancellationToken = default)
-    {
-        return await SetLikeAsync(
-            momentId,
-            userId,
-            false,
-            cancellationToken);
-    }
-
-    private async Task<MomentLikeResult> SetLikeAsync(
-        Guid momentId,
-        Guid userId,
-        bool isLiked,
-        CancellationToken cancellationToken)
-    {
-        if (momentId == Guid.Empty)
-            throw new ArgumentException("A valid Moment ID is required.");
-
-        if (userId == Guid.Empty)
-            throw new ArgumentException("A valid user ID is required.");
-
-        var moment = await _momentRepository.GetByIdAsync(
-            momentId,
-            cancellationToken);
-
-        if (moment is null || moment.Status == MomentStatus.Removed)
-            throw new KeyNotFoundException("Moment was not found.");
-
-        if (moment.Status != MomentStatus.Published)
-            throw new InvalidOperationException(
-                "Only published Moments can receive likes.");
-
-        var context = await _momentRepository.GetContributionContextAsync(
-            moment.MemoryId,
-            userId,
-            cancellationToken);
-
-        if (context is null)
-            throw new KeyNotFoundException("Memory was not found.");
-
-        EnsureCanViewMemory(
-            context.Memory,
-            context.Participant,
-            userId);
-
-        await _momentRepository.SetLikeAsync(
-            momentId,
-            userId,
-            isLiked,
-            cancellationToken);
-
-        return await _momentRepository.GetLikeSummaryAsync(
-            momentId,
-            userId,
-            cancellationToken);
-    }
-
 }

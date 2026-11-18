@@ -27,10 +27,6 @@ public class CreateMomentResult
 
     public DateTime? PublishedAtUtc { get; set; }
 
-    public int LikeCount { get; set; }
-
-    public bool IsLikedByCurrentUser { get; set; }
-
     public List<MomentMediaResult> Media { get; set; } = [];
 }
 
