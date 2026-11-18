@@ -75,8 +75,17 @@
                         </header>
 
                         <a class="feed-cover cover-tone-@((Math.Abs(memory.Id.GetHashCode()) % 5) + 1)" href="@($"/memories/{memory.Id}")">
-                            <span class="cover-decoration">✳</span>
-                            <span class="cover-wordmark">SHANDIS</span>
+                            @if (memory.LatestMoment?.Media.FirstOrDefault() is { } previewMedia &&
+                                 previewMedia.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <img class="feed-media-preview" src="@previewMedia.Url" alt="@memory.Title" loading="lazy" />
+                            }
+                            else
+                            {
+                                <span class="cover-decoration">✳</span>
+                                <span class="cover-wordmark">SHANDIS</span>
+                            }
+                            <span class="cover-scrim"></span>
                             <span class="cover-title">@memory.Title</span>
                             <span class="cover-location">
                                 @if (!string.IsNullOrWhiteSpace(memory.PlaceName))
@@ -88,7 +97,15 @@
                                     <span>· @memory.StartDateUtc.Value.ToLocalTime().ToString("d MMM yyyy")</span>
                                 }
                             </span>
-                            <span class="cover-open">Open memory ↗</span>
+                            @if (memory.LatestMoment?.Media.FirstOrDefault() is { } mediaPreview &&
+                                 mediaPreview.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="cover-open">Latest moment ↗</span>
+                            }
+                            else
+                            {
+                                <span class="cover-open">Open memory ↗</span>
+                            }
                         </a>
 
                         <div class="feed-actions">
@@ -104,6 +121,10 @@
                             @if (!string.IsNullOrWhiteSpace(memory.Description))
                             {
                                 <span>@memory.Description</span>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(memory.LatestMoment?.Content))
+                            {
+                                <span>@memory.LatestMoment.Content</span>
                             }
                             else
                             {
@@ -205,6 +226,20 @@
             .Select(group => group.First())
             .OrderByDescending(item => item.StartDateUtc ?? DateTime.MinValue)
             .ToList();
+
+            var previewTasks = allMemories.Take(6).Select(async item =>
+            {
+                try
+                {
+                    var moments = await ApiClient.GetMomentsAsync(item.Id, page: 1, pageSize: 1);
+                    item.LatestMoment = moments.Moments.FirstOrDefault();
+                }
+                catch
+                {
+                    // A Memory without accessible Moments still appears in the feed.
+                }
+            });
+            await Task.WhenAll(previewTasks);
         }
         catch (HttpRequestException ex)
         {
@@ -248,5 +283,6 @@
         public int Visibility { get; set; }
         public DateTime? StartDateUtc { get; set; }
         public bool IsOwner { get; set; }
+        public Shandis.Web.Models.MomentItem? LatestMoment { get; set; }
     }
 }
