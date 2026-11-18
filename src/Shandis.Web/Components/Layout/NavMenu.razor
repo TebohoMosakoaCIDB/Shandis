@@ -1,30 +1,21 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Shandis.Web</a>
-    </div>
-</div>
+<nav class="shandis-nav" aria-label="Main navigation">
+    <span class="nav-section-label">MENU</span>
+    <NavLink class="shandis-nav-link" href="/" Match="NavLinkMatch.All">
+        <span class="nav-icon">⌂</span><span>Home</span>
+    </NavLink>
+    <NavLink class="shandis-nav-link" href="/#my-memories">
+        <span class="nav-icon">▧</span><span>My Memories</span>
+    </NavLink>
+    <NavLink class="shandis-nav-link" href="/#shared-with-me">
+        <span class="nav-icon">♡</span><span>Shared with Me</span>
+    </NavLink>
+    <NavLink class="shandis-nav-link" href="/#discover">
+        <span class="nav-icon">⌕</span><span>Discover</span>
+    </NavLink>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-    </nav>
-</div>
-
+    <span class="nav-section-label nav-section-spaced">YOUR SPACE</span>
+    <a class="shandis-nav-link" href="/#notifications">
+        <span class="nav-icon">♧</span><span>Notifications</span>
+        <span class="nav-count">2</span>
+    </a>
+</nav>
