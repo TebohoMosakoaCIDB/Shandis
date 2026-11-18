@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Shandis.Web.Models;
@@ -129,7 +130,11 @@ public sealed class CreateMomentCommentRequest
 
 public sealed class CreateMemoryRequest
 {
+    [Required(ErrorMessage = "Give your Memory a name.")]
+    [MaxLength(200)]
     public string Title { get; set; } = string.Empty;
+
+    [MaxLength(2000)]
     public string? Description { get; set; }
     public string Visibility { get; set; } = "Private";
     public string ContributionPolicy { get; set; } = "InvitationOnly";
