@@ -27,6 +27,16 @@ public sealed class ShandisApiClient(HttpClient httpClient)
             cancellationToken);
     }
 
+    public async Task<SharedMemoriesResponse> GetSharedMemoriesAsync(
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        return await GetRequiredAsync<SharedMemoriesResponse>(
+            $"api/memories/shared-with-me?page={page}&pageSize={pageSize}",
+            cancellationToken);
+    }
+
     public async Task<MemoryDetails?> GetMemoryAsync(
         Guid memoryId,
         CancellationToken cancellationToken = default)
