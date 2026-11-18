@@ -37,9 +37,15 @@
 .cover-tone-3{background:radial-gradient(circle at 20% 80%,#F7D4C7,transparent 40%),linear-gradient(135deg,#E7C98E,#F1E2C5 52%,#D3B7C7)}
 .cover-tone-4{background:radial-gradient(circle at 80% 75%,#F8D7C7,transparent 38%),linear-gradient(135deg,#B8CFC4,#E6D4B9 52%,#DDA99D)}
 .cover-tone-5{background:radial-gradient(circle at 35% 25%,#F7E7D3,transparent 40%),linear-gradient(135deg,#D6B9C8,#EBD4C1 52%,#B8CDC4)}
+.feed-media-preview{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cover-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,18,18,.04) 20%,rgba(20,18,18,.55) 100%)}
 .cover-decoration{position:relative;z-index:1;margin-bottom:16px;font-size:40px;opacity:.72}
 .cover-wordmark{position:relative;z-index:1;font-size:8px;font-weight:900;letter-spacing:.28em;opacity:.72}
 .cover-title{position:relative;z-index:1;max-width:90%;margin:9px 0;font-family:Manrope,sans-serif;font-size:clamp(24px,4vw,38px);font-weight:850;letter-spacing:-.05em;line-height:1.12}
+.feed-cover:has(.feed-media-preview){color:#fff}
+.feed-cover:has(.feed-media-preview) .cover-wordmark{display:none}
+.feed-cover:has(.feed-media-preview) .cover-location{color:#fff}
+.feed-cover:has(.feed-media-preview) .cover-open{border-color:rgba(255,255,255,.55)}
 .cover-location{position:relative;z-index:1;display:flex;flex-wrap:wrap;justify-content:center;gap:6px;font-size:10px;font-weight:650;opacity:.8}
 .cover-open{position:absolute;right:14px;bottom:13px;z-index:1;padding:6px 10px;border:1px solid rgba(73,52,46,.25);border-radius:999px;font-size:9px;font-weight:750}
 .feed-actions{display:flex;align-items:center;gap:15px;padding:10px 15px 4px}
