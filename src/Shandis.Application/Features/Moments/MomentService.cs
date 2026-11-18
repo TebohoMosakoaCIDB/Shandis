@@ -745,4 +745,131 @@ public class MomentService : IMomentService
             cancellationToken);
     }
 
+
+    public async Task<MomentCommentResult> CreateCommentAsync(
+        Guid momentId, Guid userId, string content, Guid? parentCommentId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (momentId == Guid.Empty || userId == Guid.Empty)
+            throw new ArgumentException("Valid Moment and user IDs are required.");
+
+        var moment = await GetPublishedMomentForInteractionAsync(momentId, userId, cancellationToken);
+
+        if (parentCommentId.HasValue)
+        {
+            var parent = await _momentRepository.GetCommentByIdAsync(parentCommentId.Value, cancellationToken);
+            if (parent is null || parent.MomentId != momentId || parent.ParentCommentId is not null)
+                throw new InvalidOperationException("A reply must target an existing top-level comment on this Moment.");
+        }
+
+        var comment = new MomentComment(moment.Id, userId, content, parentCommentId);
+        await _momentRepository.AddCommentAsync(comment, cancellationToken);
+
+        return await _momentRepository.GetCommentResultAsync(comment.Id, userId, cancellationToken)
+            ?? throw new InvalidOperationException("The comment was saved but could not be retrieved.");
+    }
+
+    public async Task<GetMomentCommentsResult> GetCommentsAsync(
+        Guid momentId, Guid userId, int page = 1, int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (momentId == Guid.Empty || userId == Guid.Empty)
+            throw new ArgumentException("Valid Moment and user IDs are required.");
+        if (page < 1) throw new ArgumentException("Page must be greater than zero.");
+        if (pageSize < 1 || pageSize > 100)
+            throw new ArgumentException("Page size must be between 1 and 100.");
+
+        await GetPublishedMomentForInteractionAsync(momentId, userId, cancellationToken);
+        var (comments, totalCount) = await _momentRepository.GetCommentsAsync(
+            momentId, userId, page, pageSize, cancellationToken);
+
+        return new GetMomentCommentsResult
+        {
+            MomentId = momentId,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            Comments = comments.ToList()
+        };
+    }
+
+    public async Task<MomentCommentResult> UpdateCommentAsync(
+        Guid momentId, Guid commentId, Guid userId, string content,
+        CancellationToken cancellationToken = default)
+    {
+        var (comment, _) = await GetCommentForActionAsync(momentId, commentId, userId, cancellationToken);
+        if (comment.UserId != userId)
+            throw new UnauthorizedAccessException("You can only edit your own comments.");
+
+        comment.UpdateContent(content);
+        await _momentRepository.SaveCommentAsync(comment, cancellationToken);
+
+        return await _momentRepository.GetCommentResultAsync(commentId, userId, cancellationToken)
+            ?? throw new KeyNotFoundException("Comment was not found.");
+    }
+
+    public async Task DeleteCommentAsync(
+        Guid momentId, Guid commentId, Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var (comment, memoryOwnerId) = await GetCommentForActionAsync(
+            momentId, commentId, userId, cancellationToken);
+
+        if (comment.UserId != userId && memoryOwnerId != userId)
+            throw new UnauthorizedAccessException("Only the comment author or Memory owner can delete this comment.");
+
+        comment.Delete();
+        await _momentRepository.SaveCommentAsync(comment, cancellationToken);
+    }
+
+    public Task<MomentCommentLikeResult> LikeCommentAsync(
+        Guid momentId, Guid commentId, Guid userId,
+        CancellationToken cancellationToken = default)
+        => SetCommentLikeAsync(momentId, commentId, userId, true, cancellationToken);
+
+    public Task<MomentCommentLikeResult> UnlikeCommentAsync(
+        Guid momentId, Guid commentId, Guid userId,
+        CancellationToken cancellationToken = default)
+        => SetCommentLikeAsync(momentId, commentId, userId, false, cancellationToken);
+
+    private async Task<MomentCommentLikeResult> SetCommentLikeAsync(
+        Guid momentId, Guid commentId, Guid userId, bool isLiked,
+        CancellationToken cancellationToken)
+    {
+        await GetCommentForActionAsync(momentId, commentId, userId, cancellationToken);
+        await _momentRepository.SetCommentLikeAsync(commentId, userId, isLiked, cancellationToken);
+        return await _momentRepository.GetCommentLikeSummaryAsync(commentId, userId, cancellationToken);
+    }
+
+    private async Task<MemoryMoment> GetPublishedMomentForInteractionAsync(
+        Guid momentId, Guid userId, CancellationToken cancellationToken)
+    {
+        var moment = await _momentRepository.GetByIdAsync(momentId, cancellationToken);
+        if (moment is null || moment.Status == MomentStatus.Removed)
+            throw new KeyNotFoundException("Moment was not found.");
+        if (moment.Status != MomentStatus.Published)
+            throw new InvalidOperationException("Only published Moments can receive comments and comment likes.");
+
+        var context = await _momentRepository.GetContributionContextAsync(
+            moment.MemoryId, userId, cancellationToken);
+        if (context is null) throw new KeyNotFoundException("Memory was not found.");
+
+        EnsureCanViewMemory(context.Memory, context.Participant, userId);
+        return moment;
+    }
+
+    private async Task<(MomentComment Comment, Guid MemoryOwnerId)> GetCommentForActionAsync(
+        Guid momentId, Guid commentId, Guid userId, CancellationToken cancellationToken)
+    {
+        if (momentId == Guid.Empty || commentId == Guid.Empty || userId == Guid.Empty)
+            throw new ArgumentException("Valid Moment, comment and user IDs are required.");
+
+        var comment = await _momentRepository.GetCommentByIdAsync(commentId, cancellationToken);
+        if (comment is null || comment.MomentId != momentId)
+            throw new KeyNotFoundException("Comment was not found.");
+
+        await GetPublishedMomentForInteractionAsync(momentId, userId, cancellationToken);
+        return (comment, comment.Moment.Memory.OwnerId);
+    }
+
 }
