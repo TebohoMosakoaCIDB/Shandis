@@ -125,3 +125,27 @@ public sealed class CreateMomentCommentRequest
     public string Content { get; set; } = string.Empty;
     public Guid? ParentCommentId { get; set; }
 }
+
+
+public sealed class CreateMemoryRequest
+{
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string Visibility { get; set; } = "Private";
+    public string ContributionPolicy { get; set; } = "InvitationOnly";
+    public DateTimeOffset? StartDate { get; set; }
+    public DateTimeOffset? EndDate { get; set; }
+    public string TimeZoneId { get; set; } = "Africa/Johannesburg";
+}
+
+public sealed class CreatedMemoryResponse
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public Guid OwnerId { get; set; }
+    public int Visibility { get; set; }
+    public int ContributionPolicy { get; set; }
+    public int Status { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+}
