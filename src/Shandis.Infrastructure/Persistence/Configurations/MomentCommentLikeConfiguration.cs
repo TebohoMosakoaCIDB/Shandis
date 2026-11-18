@@ -11,17 +11,10 @@ public class MomentCommentLikeConfiguration : IEntityTypeConfiguration<MomentCom
     {
         builder.ToTable("MomentCommentLikes");
         builder.HasKey(x => x.Id);
-
-        builder.HasOne(x => x.Comment)
-            .WithMany(x => x.Likes)
-            .HasForeignKey(x => x.CommentId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne<ShandisUser>()
-            .WithMany()
-            .HasForeignKey(x => x.UserId)
+        builder.HasOne(x => x.Comment).WithMany(x => x.Likes)
+            .HasForeignKey(x => x.CommentId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<ShandisUser>().WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict);
-
         builder.HasIndex(x => new { x.CommentId, x.UserId }).IsUnique();
         builder.HasIndex(x => x.UserId);
     }
