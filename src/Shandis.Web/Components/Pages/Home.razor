@@ -1,91 +1,252 @@
 @page "/"
+@inject Shandis.Web.Services.ShandisAuthService AuthService
+@inject Shandis.Web.Services.ShandisApiClient ApiClient
 
 <PageTitle>Home · Shandis</PageTitle>
 
-<div class="home-page">
-    <section class="welcome-row">
-        <div>
-            <p class="eyebrow">WEDNESDAY, 18 NOVEMBER</p>
-            <h1>Your memories, <span>all together.</span></h1>
-            <p class="welcome-copy">Every moment has a story. Pick up where you left off or start something new.</p>
-        </div>
-        <a class="shandis-btn shandis-btn-primary welcome-create" href="/memories/create">
-            <span>+</span> Create a memory
-        </a>
-    </section>
+<div class="social-home">
+    <section class="feed-column">
+        <header class="feed-header">
+            <div>
+                <p class="eyebrow">YOUR PEOPLE, YOUR MOMENTS</p>
+                <h1>Good to see you <span>again.</span></h1>
+                <p class="feed-subtitle">A little window into the memories you're part of.</p>
+            </div>
+            <a class="create-memory-link" href="/memories/create"><span>＋</span> Create</a>
+        </header>
 
-    <section class="memory-stats" aria-label="Your Shandis overview">
-        <article class="stat-card">
-            <span class="stat-icon stat-coral">▧</span>
-            <div><strong>12</strong><span>My memories</span></div>
-        </article>
-        <article class="stat-card">
-            <span class="stat-icon stat-sage">♡</span>
-            <div><strong>8</strong><span>Shared with me</span></div>
-        </article>
-        <article class="stat-card">
-            <span class="stat-icon stat-gold">✳</span>
-            <div><strong>46</strong><span>Moments added</span></div>
-        </article>
-    </section>
-
-    <section class="section-block" id="my-memories">
-        <div class="section-heading">
-            <div><p class="eyebrow">YOUR COLLECTION</p><h2>Pick up the memories</h2></div>
-            <a class="text-link" href="/#my-memories">View all <span>→</span></a>
-        </div>
-        <div class="memory-grid">
-            <a class="memory-card" href="/memories">
-                <div class="memory-cover cover-birthday">
-                    <span class="cover-tag">YOUR MEMORY</span>
-                    <span class="cover-date">08 NOV 2026</span>
-                </div>
-                <div class="memory-card-body">
-                    <div class="memory-card-title"><h3>A little birthday magic</h3><span class="privacy-dot" title="Private memory">●</span></div>
-                    <p>Johannesburg · 8 Nov 2026</p>
-                    <div class="memory-card-footer"><span>♡ 18 Moments</span><span class="avatar-stack"><i>TM</i><i>LN</i><i>+4</i></span></div>
-                </div>
+        <section class="stories-strip" aria-label="Your memories">
+            <a class="story-bubble create-story" href="/memories/create">
+                <span class="story-ring"><span class="story-inner">＋</span></span>
+                <span>Your story</span>
             </a>
-            <a class="memory-card" href="/memories">
-                <div class="memory-cover cover-wedding">
-                    <span class="cover-tag">CONTRIBUTING</span>
-                    <span class="cover-date">24 OCT 2026</span>
-                </div>
-                <div class="memory-card-body">
-                    <div class="memory-card-title"><h3>Thando &amp; Lwazi's day</h3><span class="privacy-dot public" title="Public memory">●</span></div>
-                    <p>Hartbeespoort · 24 Oct 2026</p>
-                    <div class="memory-card-footer"><span>♡ 64 Moments</span><span class="avatar-stack"><i>TL</i><i>SK</i><i>+12</i></span></div>
-                </div>
-            </a>
-            <a class="memory-card" href="/memories">
-                <div class="memory-cover cover-concert">
-                    <span class="cover-tag">YOUR MEMORY</span>
-                    <span class="cover-date">12 SEP 2026</span>
-                </div>
-                <div class="memory-card-body">
-                    <div class="memory-card-title"><h3>That one summer show</h3><span class="privacy-dot">●</span></div>
-                    <p>Pretoria · 12 Sep 2026</p>
-                    <div class="memory-card-footer"><span>♡ 32 Moments</span><span class="avatar-stack"><i>TM</i><i>KB</i><i>+7</i></span></div>
-                </div>
-            </a>
+            @foreach (var memory in allMemories.Take(9))
+            {
+                <a class="story-bubble" href="@($"/memories/{memory.Id}")" title="@memory.Title">
+                    <span class="story-ring"><span class="story-inner story-colour-@((Math.Abs(memory.Id.GetHashCode()) % 5) + 1)">@Initials(memory.Title)</span></span>
+                    <span>@ShortTitle(memory.Title)</span>
+                </a>
+            }
+            @if (allMemories.Count == 0)
+            {
+                <div class="stories-empty">Your Memories will show up here.</div>
+            }
+        </section>
+
+        <div class="feed-section-heading">
+            <div><span class="live-dot"></span><span>YOUR MEMORY FEED</span></div>
+            <span class="feed-sort">Recent first</span>
         </div>
+
+        @if (isLoading)
+        {
+            <div class="feed-state"><span class="loading-pulse"></span><p>Gathering your memories…</p></div>
+        }
+        else if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="feed-state">
+                <h2>We couldn't load your feed</h2>
+                <p>@errorMessage</p>
+                <button class="shandis-btn shandis-btn-secondary" @onclick="LoadFeedAsync">Try again</button>
+            </div>
+        }
+        else if (allMemories.Count == 0)
+        {
+            <div class="feed-state feed-empty">
+                <span class="empty-symbol">✳</span>
+                <h2>Your story starts here.</h2>
+                <p>Create a Memory for an experience you want to keep, then invite your people to add their perspectives.</p>
+                <a class="shandis-btn shandis-btn-primary" href="/memories/create">Create your first Memory</a>
+            </div>
+        }
+        else
+        {
+            <div class="memory-feed">
+                @foreach (var memory in allMemories)
+                {
+                    <article class="feed-card" @key="memory.Id">
+                        <header class="feed-card-header">
+                            <div class="memory-avatar avatar-colour-@((Math.Abs(memory.Id.GetHashCode()) % 5) + 1)">@Initials(memory.Title)</div>
+                            <div class="feed-author">
+                                <strong>@memory.Title</strong>
+                                <span>@(memory.IsOwner ? "Created by you" : "Shared with you") · @DateLabel(memory.StartDateUtc)</span>
+                            </div>
+                            <a class="more-link" href="@($"/memories/{memory.Id}")" aria-label="Open memory">•••</a>
+                        </header>
+
+                        <a class="feed-cover cover-tone-@((Math.Abs(memory.Id.GetHashCode()) % 5) + 1)" href="@($"/memories/{memory.Id}")">
+                            <span class="cover-decoration">✳</span>
+                            <span class="cover-wordmark">SHANDIS</span>
+                            <span class="cover-title">@memory.Title</span>
+                            <span class="cover-location">
+                                @if (!string.IsNullOrWhiteSpace(memory.PlaceName))
+                                {
+                                    <span>⌖ @memory.PlaceName</span>
+                                }
+                                @if (memory.StartDateUtc.HasValue)
+                                {
+                                    <span>· @memory.StartDateUtc.Value.ToLocalTime().ToString("d MMM yyyy")</span>
+                                }
+                            </span>
+                            <span class="cover-open">Open memory ↗</span>
+                        </a>
+
+                        <div class="feed-actions">
+                            <a href="@($"/memories/{memory.Id}")" class="feed-action" aria-label="View moments"><span class="action-icon">♡</span></a>
+                            <a href="@($"/memories/{memory.Id}")" class="feed-action" aria-label="View comments"><span class="action-icon">▢</span></a>
+                            <a href="@($"/memories/{memory.Id}")" class="feed-action" aria-label="Open memory"><span class="action-icon">↗</span></a>
+                            <span class="feed-action-spacer"></span>
+                            <span class="memory-status">@((memory.Visibility == 2) ? "PRIVATE" : "PUBLIC")</span>
+                        </div>
+
+                        <div class="feed-caption">
+                            <strong>@memory.Title</strong>
+                            @if (!string.IsNullOrWhiteSpace(memory.Description))
+                            {
+                                <span>@memory.Description</span>
+                            }
+                            else
+                            {
+                                <span>A shared space for all the moments that made this experience special.</span>
+                            }
+                        </div>
+                        <footer class="feed-card-footer">
+                            <span>@(memory.CategoryName ?? "Memory")</span>
+                            <a href="@($"/memories/{memory.Id}")">View all moments <span>→</span></a>
+                        </footer>
+                    </article>
+                }
+            </div>
+        }
     </section>
 
-    <section class="section-block shared-section" id="shared-with-me">
-        <div class="section-heading">
-            <div><p class="eyebrow">FROM YOUR PEOPLE</p><h2>Shared with you</h2></div>
-            <a class="text-link" href="/#shared-with-me">See all <span>→</span></a>
-        </div>
-        <div class="shared-card">
-            <div class="shared-avatar">LN</div>
-            <div class="shared-description"><strong>Lesego invited you to a memory</strong><span>Family December Lunch · Contribution welcome</span></div>
-            <span class="shared-time">2 hours ago</span>
-            <a class="shandis-btn shandis-btn-secondary" href="/memories">Open memory</a>
-        </div>
-    </section>
+    <aside class="feed-sidebar">
+        <section class="profile-summary">
+            <div class="profile-summary-avatar">S</div>
+            <div><strong>Your Shandis space</strong><span>Keep your people close.</span></div>
+        </section>
 
-    <section class="discover-banner" id="discover">
-        <div><span class="discover-spark">✳</span><p class="eyebrow">GOOD MEMORIES ARE BETTER SHARED</p><h2>Have a moment worth keeping?</h2><p>Bring everyone's photos, videos and stories together in one place.</p></div>
-        <a class="shandis-btn shandis-btn-primary" href="/memories/create">Start a memory <span>→</span></a>
-    </section>
+        <section class="sidebar-widget">
+            <div class="widget-heading"><h2>Your collection</h2><a href="/memories">See all</a></div>
+            <div class="collection-stat"><span class="collection-icon">▧</span><span>Memories</span><strong>@myMemoriesCount</strong></div>
+            <div class="collection-stat"><span class="collection-icon sage">♡</span><span>Shared with you</span><strong>@sharedMemoriesCount</strong></div>
+        </section>
+
+        <section class="sidebar-widget people-widget">
+            <div class="widget-heading"><h2>What is Shandis?</h2></div>
+            <p>One experience. Many perspectives. One collective memory.</p>
+            <a href="/memories">Explore your memories <span>→</span></a>
+        </section>
+
+        <p class="sidebar-footnote">Made for the moments that matter. <span>✳</span></p>
+    </aside>
 </div>
+
+@code {
+    private List<Shandis.Web.Models.MyMemoryItem> myMemories = [];
+    private List<Shandis.Web.Models.SharedMemoryItem> sharedMemories = [];
+    private List<FeedMemory> allMemories = [];
+    private bool isLoading = true;
+    private string? errorMessage;
+    private int myMemoriesCount;
+    private int sharedMemoriesCount;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await AuthService.InitializeAsync();
+            await LoadFeedAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadFeedAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var mineTask = ApiClient.GetMyMemoriesAsync(page: 1, pageSize: 30);
+            var sharedTask = ApiClient.GetSharedMemoriesAsync(page: 1, pageSize: 30);
+            await Task.WhenAll(mineTask, sharedTask);
+
+            var mine = await mineTask;
+            var shared = await sharedTask;
+
+            myMemories = mine.Items;
+            sharedMemories = shared.Items;
+            myMemoriesCount = mine.TotalCount;
+            sharedMemoriesCount = shared.TotalCount;
+
+            allMemories = myMemories.Select(item => new FeedMemory
+            {
+                Id = item.Id,
+                Title = item.Title,
+                Description = item.Description,
+                PlaceName = item.PlaceName,
+                CategoryName = item.CategoryName,
+                Visibility = item.Visibility,
+                StartDateUtc = item.StartDateUtc,
+                IsOwner = item.IsOwner
+            }).Concat(sharedMemories.Select(item => new FeedMemory
+            {
+                Id = item.Id,
+                Title = item.Title,
+                Description = item.Description,
+                PlaceName = item.PlaceName,
+                CategoryName = item.CategoryName,
+                Visibility = item.Visibility,
+                StartDateUtc = item.StartDateUtc,
+                IsOwner = false
+            }))
+            .GroupBy(item => item.Id)
+            .Select(group => group.First())
+            .OrderByDescending(item => item.StartDateUtc ?? DateTime.MinValue)
+            .ToList();
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = ex.StatusCode == System.Net.HttpStatusCode.Unauthorized
+                ? "Your session has expired. Please sign in again."
+                : "Please check that the Shandis API is running and try again.";
+        }
+        catch (Exception)
+        {
+            errorMessage = "Something unexpected happened while loading your feed.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private static string Initials(string title)
+    {
+        var parts = title.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "S";
+        return parts.Length == 1
+            ? parts[0][..Math.Min(2, parts[0].Length)].ToUpperInvariant()
+            : $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
+    }
+
+    private static string ShortTitle(string title) =>
+        title.Length > 11 ? title[..10] + "…" : title;
+
+    private static string DateLabel(DateTime? date) =>
+        date.HasValue ? date.Value.ToLocalTime().ToString("d MMM yyyy") : "Date not set";
+
+    private sealed class FeedMemory
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string? PlaceName { get; set; }
+        public string? CategoryName { get; set; }
+        public int Visibility { get; set; }
+        public DateTime? StartDateUtc { get; set; }
+        public bool IsOwner { get; set; }
+    }
+}
