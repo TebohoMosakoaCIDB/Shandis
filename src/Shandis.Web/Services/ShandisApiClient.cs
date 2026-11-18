@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Components.Forms;
 using Shandis.Web.Models;
 
 namespace Shandis.Web.Services;
@@ -87,7 +88,7 @@ public sealed class ShandisApiClient(HttpClient httpClient)
         {
             var stream = file.OpenReadStream(
                 maxAllowedSize: 50 * 1024 * 1024,
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             var fileContent = new StreamContent(stream);
             fileContent.Headers.ContentType =
