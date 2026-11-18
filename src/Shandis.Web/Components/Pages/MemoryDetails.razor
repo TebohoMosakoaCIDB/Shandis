@@ -156,9 +156,68 @@
                                     </button>
                                 }
                                 <div class="moment-post-actions">
-                                    <span>♡ @moment.LikeCount @(moment.LikeCount == 1 ? "like" : "likes")</span>
-                                    <span>@(moment.MomentType == 4 ? "STORY" : moment.MomentType == 5 ? "MIXED MOMENT" : "MOMENT")</span>
+                                    <button class="moment-action like-action @(moment.IsLikedByCurrentUser ? "is-liked" : "")"
+                                            @onclick="() => ToggleMomentLikeAsync(moment)"
+                                            disabled="@busyMomentIds.Contains(moment.Id)">
+                                        @(moment.IsLikedByCurrentUser ? "♥" : "♡")
+                                        @moment.LikeCount @(moment.LikeCount == 1 ? "like" : "likes")
+                                    </button>
+                                    <button class="moment-action" @onclick="() => ToggleCommentsAsync(moment.Id)">
+                                        ◯ Comments
+                                    </button>
+                                    <span class="moment-kind">@(moment.MomentType == 4 ? "STORY" : moment.MomentType == 5 ? "MIXED MOMENT" : "MOMENT")</span>
                                 </div>
+                                @if (activeCommentsMomentId == moment.Id)
+                                {
+                                    <div class="moment-comments">
+                                        @if (commentsLoading)
+                                        {
+                                            <p class="comments-state">Loading comments…</p>
+                                        }
+                                        else if (!string.IsNullOrWhiteSpace(commentsError))
+                                        {
+                                            <p class="comments-error">@commentsError</p>
+                                        }
+                                        else if (activeComments.Count == 0)
+                                        {
+                                            <p class="comments-state">No comments yet. Start the conversation.</p>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var comment in activeComments)
+                                            {
+                                                <div class="moment-comment" @key="comment.Id">
+                                                    <div class="comment-avatar">@Initials(comment.AuthorName)</div>
+                                                    <div class="comment-body">
+                                                        <div class="comment-heading">
+                                                            <strong>@comment.AuthorName</strong>
+                                                            <span>@comment.CreatedAtUtc.ToLocalTime().ToString("d MMM · HH:mm")</span>
+                                                        </div>
+                                                        <p>@comment.Content</p>
+                                                        @foreach (var reply in comment.Replies)
+                                                        {
+                                                            <div class="comment-reply" @key="reply.Id">
+                                                                <strong>@reply.AuthorName</strong>
+                                                                <span>@reply.Content</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                        <div class="comment-composer">
+                                            <input @bind="newCommentContent"
+                                                   @bind:event="oninput"
+                                                   maxlength="2000"
+                                                   placeholder="Add a comment…" />
+                                            <button class="shandis-btn shandis-btn-primary"
+                                                    @onclick="() => AddCommentAsync(moment.Id)"
+                                                    disabled="@(!CanPostComment || isPostingComment)">
+                                                @(isPostingComment ? "Posting…" : "Post")
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
                             </div>
                         </article>
                     }
@@ -285,6 +344,27 @@
     .lightbox-close{position:absolute;top:14px;right:20px;border:0;background:none;color:white;font-size:35px;cursor:pointer}
     .lightbox-nav{position:absolute;top:50%;display:grid;place-items:center;width:38px;height:38px;border:0;border-radius:50%;background:rgba(255,255,255,.92);color:#332A28;font-size:28px;cursor:pointer;transform:translateY(-50%)}
     .lightbox-previous{left:14px}.lightbox-next{right:14px}
+    .moment-action{padding:0;border:0;background:transparent;color:var(--shandis-text-muted);font-size:9px;font-weight:750;cursor:pointer}
+    .moment-action:hover{color:var(--shandis-primary)}
+    .moment-action:disabled{opacity:.55;cursor:wait}
+    .moment-action.like-action.is-liked{color:#D65F67}
+    .moment-kind{margin-left:auto;color:var(--shandis-text-muted);font-size:8px;font-weight:850;letter-spacing:.1em}
+    .moment-comments{margin-top:13px;padding:13px;background:var(--shandis-surface-muted);border-radius:12px}
+    .comments-state,.comments-error{margin:0 0 10px;color:var(--shandis-text-muted);font-size:10px}
+    .comments-error{color:#C34D55}
+    .moment-comment{display:flex;gap:8px;margin:0 0 12px}
+    .comment-avatar{display:grid;place-items:center;flex:0 0 27px;width:27px;height:27px;border-radius:50%;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:8px;font-weight:850}
+    .comment-body{flex:1;min-width:0}
+    .comment-heading{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+    .comment-heading strong,.comment-reply strong{font-size:9px}
+    .comment-heading span{color:var(--shandis-text-muted);font-size:8px}
+    .comment-body>p{margin:3px 0 0;font-size:10px;line-height:1.5;white-space:pre-wrap}
+    .comment-reply{display:flex;gap:6px;margin:8px 0 0 10px;padding-left:9px;border-left:2px solid var(--shandis-border);font-size:9px}
+    .comment-reply span{font-size:9px;white-space:pre-wrap}
+    .comment-composer{display:flex;gap:7px;margin-top:10px}
+    .comment-composer input{flex:1;min-width:0;padding:9px 11px;border:1px solid var(--shandis-border);border-radius:999px;background:var(--shandis-surface);color:var(--shandis-text);font-size:10px;outline:none}
+    .comment-composer input:focus{border-color:var(--shandis-primary)}
+    .comment-composer .shandis-btn{padding:8px 13px;font-size:9px}
     @@keyframes spin{to{transform:rotate(360deg)}}
     @@media(max-width:760px){.memory-details-page{padding:10px 14px 85px}.memory-profile-content{gap:12px;padding:0 16px 16px}.memory-profile-avatar{flex-basis:68px;width:68px;height:68px;font-size:19px}.memory-profile-count{padding:8px 10px}.memory-profile-actions{padding:10px 16px}.memory-profile-art{height:110px;padding:18px}.profile-art-mark{font-size:40px}.profile-art-label{font-size:7px}.lightbox-content{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto;height:min(780px,90vh);max-width:600px}.lightbox-details{max-height:190px;overflow:auto;padding:13px}.lightbox-author{padding:9px 0}.lightbox-details h3{margin:10px 0 3px}.lightbox-footer{padding-top:8px}.gallery-lightbox{padding:35px 10px}.lightbox-nav{width:32px;height:32px;font-size:23px}}
     @@media(max-width:500px){.memory-profile-content{align-items:flex-start;flex-wrap:wrap}.memory-profile-count{margin-left:auto;border-left:0}.memory-profile-main{flex-basis:calc(100% - 85px)}.memory-profile-main h1{font-size:22px}.memory-profile-actions{gap:13px}.section-heading{align-items:flex-start;flex-direction:column}.gallery-filters{align-self:flex-start}.gallery-grid{gap:2px}.gallery-lightbox{padding:30px 6px}.lightbox-content{height:90vh}.lightbox-close{top:4px;right:10px}}
@@ -449,6 +529,96 @@
         finally
         {
             isLoadingMore = false;
+        }
+    }
+
+    private readonly HashSet<Guid> busyMomentIds = [];
+    private Guid? activeCommentsMomentId;
+    private List<Shandis.Web.Models.MomentCommentItem> activeComments = [];
+    private string newCommentContent = string.Empty;
+    private bool commentsLoading;
+    private bool isPostingComment;
+    private string? commentsError;
+
+    private bool CanPostComment => !string.IsNullOrWhiteSpace(newCommentContent);
+
+    private async Task ToggleMomentLikeAsync(Shandis.Web.Models.MomentItem moment)
+    {
+        if (!busyMomentIds.Add(moment.Id))
+            return;
+
+        try
+        {
+            var result = moment.IsLikedByCurrentUser
+                ? await ApiClient.UnlikeMomentAsync(moment.Id)
+                : await ApiClient.LikeMomentAsync(moment.Id);
+
+            moment.LikeCount = result.LikeCount;
+            moment.IsLikedByCurrentUser = result.IsLikedByCurrentUser;
+        }
+        catch (Exception)
+        {
+            errorMessage = "We couldn't update your like. Please try again.";
+        }
+        finally
+        {
+            busyMomentIds.Remove(moment.Id);
+        }
+    }
+
+    private async Task ToggleCommentsAsync(Guid momentId)
+    {
+        if (activeCommentsMomentId == momentId)
+        {
+            activeCommentsMomentId = null;
+            activeComments = [];
+            commentsError = null;
+            return;
+        }
+
+        activeCommentsMomentId = momentId;
+        activeComments = [];
+        commentsError = null;
+        commentsLoading = true;
+
+        try
+        {
+            var result = await ApiClient.GetMomentCommentsAsync(momentId);
+            if (activeCommentsMomentId == momentId)
+                activeComments = result.Comments;
+        }
+        catch (Exception)
+        {
+            commentsError = "Comments couldn't be loaded. Please try again.";
+        }
+        finally
+        {
+            commentsLoading = false;
+        }
+    }
+
+    private async Task AddCommentAsync(Guid momentId)
+    {
+        var content = newCommentContent.Trim();
+        if (string.IsNullOrWhiteSpace(content) || isPostingComment)
+            return;
+
+        isPostingComment = true;
+        commentsError = null;
+
+        try
+        {
+            var created = await ApiClient.CreateMomentCommentAsync(momentId, content);
+            activeComments.Add(created);
+            newCommentContent = string.Empty;
+        }
+        catch (Exception)
+        {
+            commentsError = "Your comment couldn't be posted. Please try again.";
+        }
+        finally
+        {
+            isPostingComment = false;
         }
     }
 
