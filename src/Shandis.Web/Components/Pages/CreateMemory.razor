@@ -1,0 +1,258 @@
+@page "/memories/create"
+@inject Shandis.Web.Services.ShandisAuthService AuthService
+@inject Shandis.Web.Services.ShandisApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Create a Memory · Shandis</PageTitle>
+
+<div class="create-memory-page">
+    <a class="back-link" href="/memories">← Back to My Memories</a>
+
+    <header class="create-heading">
+        <p class="eyebrow">MAKE ROOM FOR THE MOMENTS</p>
+        <h1>Create a <span>Memory.</span></h1>
+        <p>Start with the experience. You can add photos, videos and invite your people afterwards.</p>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="form-alert" role="alert">@errorMessage</div>
+    }
+
+    <EditForm Model="model" OnValidSubmit="CreateAsync">
+        <DataAnnotationsValidator />
+        <div class="create-layout">
+            <section class="create-form-card">
+                <div class="section-intro">
+                    <span class="section-number">01</span>
+                    <div><h2>About this Memory</h2><p>Give this experience a name people will recognise.</p></div>
+                </div>
+
+                <div class="field-group">
+                    <label for="memory-title">Memory name <span>*</span></label>
+                    <InputText id="memory-title" class="form-control" @bind-Value="model.Title" maxlength="200" placeholder="e.g. Thando's 30th birthday" />
+                    <ValidationMessage For="@(() => model.Title)" />
+                </div>
+
+                <div class="field-group">
+                    <label for="memory-description">A little about it</label>
+                    <InputTextArea id="memory-description" class="form-control description-input" @bind-Value="model.Description" maxlength="2000" placeholder="What are you celebrating or remembering? (optional)" />
+                    <small>Give your contributors a little context.</small>
+                </div>
+
+                <div class="section-divider"></div>
+                <div class="section-intro">
+                    <span class="section-number">02</span>
+                    <div><h2>When did it happen?</h2><p>Dates help keep your collection organised. You can leave them blank.</p></div>
+                </div>
+
+                <div class="date-grid">
+                    <div class="field-group">
+                        <label for="start-date">Start date</label>
+                        <InputDate id="start-date" class="form-control" @bind-Value="startDate" />
+                    </div>
+                    <div class="field-group">
+                        <label for="end-date">End date</label>
+                        <InputDate id="end-date" class="form-control" @bind-Value="endDate" />
+                    </div>
+                </div>
+
+                <div class="section-divider"></div>
+                <div class="section-intro">
+                    <span class="section-number">03</span>
+                    <div><h2>Who can see it?</h2><p>Choose the audience and how people can contribute.</p></div>
+                </div>
+
+                <div class="choice-stack">
+                    <label class="choice-card @(model.Visibility == "Private" ? "selected" : "")">
+                        <InputRadioGroup @bind-Value="model.Visibility">
+                            <InputRadio Value="@("Private")" />
+                        </InputRadioGroup>
+                        <span class="choice-icon">🔒</span>
+                        <span class="choice-copy"><strong>Private</strong><small>Only you and people you invite can see this Memory.</small></span>
+                    </label>
+                    <label class="choice-card @(model.Visibility == "Public" ? "selected" : "")">
+                        <InputRadioGroup @bind-Value="model.Visibility">
+                            <InputRadio Value="@("Public")" />
+                        </InputRadioGroup>
+                        <span class="choice-icon">🌍</span>
+                        <span class="choice-copy"><strong>Public</strong><small>Anyone can view this Memory. You control how others contribute.</small></span>
+                    </label>
+                </div>
+
+                @if (model.Visibility == "Public")
+                {
+                    <div class="field-group policy-field">
+                        <label for="contribution-policy">Who can add Moments?</label>
+                        <InputSelect id="contribution-policy" class="form-control" @bind-Value="model.ContributionPolicy">
+                            <option value="Open">Anyone signed in — publish immediately</option>
+                            <option value="ApprovalRequired">Anyone signed in — you approve first</option>
+                            <option value="InvitationOnly">Only people you invite</option>
+                        </InputSelect>
+                        <small>You can change your Memory's details later.</small>
+                    </div>
+                }
+                else
+                {
+                    <p class="private-note">Private Memories are invitation-only. Invite people as viewers or contributors after creating it.</p>
+                }
+            </section>
+
+            <aside class="create-aside">
+                <div class="preview-card">
+                    <div class="preview-art"><span>✳</span><small>YOUR MEMORY</small></div>
+                    <div class="preview-copy">
+                        <span class="preview-label">A NEW EXPERIENCE</span>
+                        <h3>@(string.IsNullOrWhiteSpace(model.Title) ? "Your Memory title" : model.Title)</h3>
+                        <p>@(string.IsNullOrWhiteSpace(model.Description) ? "Your description will appear here." : model.Description)</p>
+                        <div class="preview-meta">@(model.Visibility == "Private" ? "🔒 Private" : "🌍 Public")</div>
+                    </div>
+                </div>
+                <div class="next-steps">
+                    <h3>What happens next?</h3>
+                    <ul>
+                        <li><span>1</span><div><strong>Your Memory is created</strong><small>You'll be its owner.</small></div></li>
+                        <li><span>2</span><div><strong>Add your first Moment</strong><small>Share photos, videos or a story.</small></div></li>
+                        <li><span>3</span><div><strong>Bring your people in</strong><small>Invite others to contribute.</small></div></li>
+                    </ul>
+                </div>
+                <button type="submit" class="create-submit" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="button-spinner"></span><span>Creating Memory…</span>
+                    }
+                    else
+                    {
+                        <span>Create Memory</span><span>→</span>
+                    }
+                </button>
+                <p class="submit-note">You can edit the details and privacy settings later.</p>
+            </aside>
+        </div>
+    </EditForm>
+</div>
+
+<style>
+    .create-memory-page{max-width:1040px;margin:0 auto;padding:5px 0 60px;color:var(--shandis-text)}
+    .back-link{display:inline-block;margin-bottom:22px;color:var(--shandis-text-muted);font-size:11px;text-decoration:none}
+    .back-link:hover{color:var(--shandis-primary)}
+    .create-heading{margin-bottom:25px}
+    .eyebrow{margin:0 0 7px;color:var(--shandis-primary);font-size:9px;font-weight:850;letter-spacing:.15em}
+    .create-heading h1{margin:0;font:850 clamp(30px,4vw,40px) Manrope,sans-serif;letter-spacing:-.05em}
+    .create-heading h1 span{color:var(--shandis-primary)}
+    .create-heading>p:last-child{margin:8px 0 0;color:var(--shandis-text-muted);font-size:12px}
+    .create-layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(260px,.8fr);align-items:start;gap:19px}
+    .create-form-card,.preview-card,.next-steps{background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:17px}
+    .create-form-card{padding:23px}
+    .section-intro{display:flex;align-items:flex-start;gap:12px;margin-bottom:19px}
+    .section-number{display:grid;place-items:center;flex:0 0 28px;height:28px;border-radius:9px;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:10px;font-weight:850}
+    .section-intro h2{margin:1px 0 4px;font:800 15px Manrope,sans-serif}
+    .section-intro p{margin:0;color:var(--shandis-text-muted);font-size:10px;line-height:1.5}
+    .field-group{display:flex;flex-direction:column;gap:7px;margin:0 0 17px}
+    .field-group label{font-size:10px;font-weight:800}
+    .field-group label span{color:var(--shandis-primary)}
+    .form-control{width:100%;min-height:42px;padding:10px 12px;border:1px solid var(--shandis-border);border-radius:9px;background:var(--shandis-background);color:var(--shandis-text);font:inherit;font-size:11px;outline:none}
+    .form-control:focus{border-color:var(--shandis-primary);box-shadow:0 0 0 3px var(--shandis-primary-soft)}
+    .description-input{min-height:92px;resize:vertical}
+    .field-group small,.field-group :deep(.validation-message){color:var(--shandis-text-muted);font-size:9px}
+    .date-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+    .section-divider{height:1px;margin:19px 0;background:var(--shandis-border)}
+    .choice-stack{display:grid;gap:9px}
+    .choice-card{display:flex;align-items:center;gap:11px;padding:13px;border:1px solid var(--shandis-border);border-radius:11px;cursor:pointer}
+    .choice-card.selected{border-color:var(--shandis-primary);background:var(--shandis-primary-soft)}
+    .choice-card input{accent-color:var(--shandis-primary)}
+    .choice-icon{font-size:17px}
+    .choice-copy{display:flex;flex-direction:column;gap:3px}
+    .choice-copy strong{font-size:11px}.choice-copy small{color:var(--shandis-text-muted);font-size:9px;line-height:1.4}
+    .policy-field{margin:16px 0 0}
+    .private-note{margin:13px 0 0;padding:11px;border-radius:9px;background:var(--shandis-background);color:var(--shandis-text-muted);font-size:9px;line-height:1.6}
+    .create-aside{display:grid;gap:13px}
+    .preview-card{overflow:hidden}
+    .preview-art{height:135px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:linear-gradient(135deg,#E9B8A7,#F4D8C2 52%,#C6D6C6);color:#49342E}
+    .preview-art span{font-size:36px}.preview-art small{font-size:8px;font-weight:900;letter-spacing:.2em}
+    .preview-copy{padding:15px}
+    .preview-label{color:var(--shandis-primary);font-size:8px;font-weight:850;letter-spacing:.13em}
+    .preview-copy h3{margin:8px 0 5px;font:850 16px Manrope,sans-serif}
+    .preview-copy p{margin:0;color:var(--shandis-text-muted);font-size:10px;line-height:1.5;overflow-wrap:anywhere}
+    .preview-meta{margin-top:12px;color:var(--shandis-text-muted);font-size:9px}
+    .next-steps{padding:16px}
+    .next-steps h3{margin:0 0 14px;font:800 12px Manrope,sans-serif}
+    .next-steps ul{display:grid;gap:13px;margin:0;padding:0;list-style:none}
+    .next-steps li{display:flex;align-items:flex-start;gap:9px}
+    .next-steps li>span{display:grid;place-items:center;flex:0 0 22px;height:22px;border-radius:50%;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:9px;font-weight:850}
+    .next-steps li div{display:grid;gap:3px}.next-steps strong{font-size:9px}.next-steps small{color:var(--shandis-text-muted);font-size:8px}
+    .create-submit{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;border-radius:11px;background:var(--shandis-primary);color:white;font-size:11px;font-weight:850;cursor:pointer}
+    .create-submit:disabled{opacity:.65;cursor:wait}
+    .submit-note{text-align:center;margin:-5px 0 0;color:var(--shandis-text-muted);font-size:8px}
+    .form-alert{margin-bottom:15px;padding:12px;border:1px solid #D98B7C;border-radius:10px;background:var(--shandis-primary-soft);color:var(--shandis-text);font-size:10px}
+    .button-spinner{width:13px;height:13px;border:2px solid #ffffff66;border-top-color:white;border-radius:50%;animation:spin .7s linear infinite}
+    @@keyframes spin{to{transform:rotate(360deg)}}
+    @@media(max-width:760px){.create-layout{grid-template-columns:1fr}.create-aside{grid-template-columns:1fr 1fr}.create-submit,.submit-note{grid-column:1/-1}}
+    @@media(max-width:520px){.create-form-card{padding:17px}.create-aside{grid-template-columns:1fr}.date-grid{grid-template-columns:1fr}.create-submit,.submit-note{grid-column:auto}}
+</style>
+
+@code {
+    private CreateMemoryRequest model = new();
+    private DateTime? startDate;
+    private DateTime? endDate;
+    private bool isSaving;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthService.InitializeAsync();
+    }
+
+    private async Task CreateAsync()
+    {
+        if (isSaving)
+            return;
+
+        errorMessage = null;
+
+        if (startDate.HasValue && endDate.HasValue && endDate.Value.Date < startDate.Value.Date)
+        {
+            errorMessage = "The end date cannot be earlier than the start date.";
+            return;
+        }
+
+        model.StartDate = ToSouthAfricanDate(startDate);
+        model.EndDate = ToSouthAfricanDate(endDate);
+        model.ContributionPolicy = model.Visibility == "Private"
+            ? "InvitationOnly"
+            : model.ContributionPolicy;
+
+        isSaving = true;
+
+        try
+        {
+            var created = await ApiClient.CreateMemoryAsync(model);
+            Navigation.NavigateTo($"/memories/{created.Id}");
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = ex.StatusCode == System.Net.HttpStatusCode.Unauthorized
+                ? "Your session has expired. Please sign in again, then try creating your Memory."
+                : string.IsNullOrWhiteSpace(ex.Message)
+                    ? "We couldn't create your Memory. Please try again."
+                    : ex.Message;
+        }
+        catch (Exception)
+        {
+            errorMessage = "Something unexpected happened while creating your Memory. Please try again.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static DateTimeOffset? ToSouthAfricanDate(DateTime? value)
+    {
+        if (!value.HasValue)
+            return null;
+
+        var localDate = DateTime.SpecifyKind(value.Value.Date, DateTimeKind.Unspecified);
+        return new DateTimeOffset(localDate, TimeSpan.FromHours(2));
+    }
+}
