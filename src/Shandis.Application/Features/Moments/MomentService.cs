@@ -145,6 +145,18 @@ public class MomentService : IMomentService
         if (isOwner)
             return false;
 
+        // An explicitly invited Viewer must never contribute, even when
+        // the Memory is public and its contribution policy is Open or ApprovalRequired.
+        if (participant is
+            {
+                Status: ParticipantStatus.Active,
+                Role: ParticipantRole.Viewer
+            })
+        {
+            throw new UnauthorizedAccessException(
+                "Viewers can view this Memory but cannot add Moments.");
+        }
+
         var isActiveContributor =
             participant is not null &&
             participant.Status == ParticipantStatus.Active &&
@@ -217,12 +229,6 @@ public class MomentService : IMomentService
                 ParticipantRole.Contributor,
                 ParticipantJoinSource.Contribution);
 
-            return participant;
-        }
-
-        if (participant.Role == ParticipantRole.Viewer)
-        {
-            participant.PromoteToContributor();
             return participant;
         }
 
