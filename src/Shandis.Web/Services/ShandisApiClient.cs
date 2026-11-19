@@ -264,6 +264,35 @@ public sealed class ShandisApiClient(HttpClient httpClient)
         await EnsureSuccessAsync(response, cancellationToken);
     }
 
+    public async Task<NotificationFeed> GetNotificationsAsync(
+        CancellationToken cancellationToken = default)
+        => await GetRequiredAsync<NotificationFeed>(
+            "api/notifications",
+            cancellationToken);
+
+    public async Task MarkNotificationReadAsync(
+        Guid notificationId,
+        CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.PostAsync(
+            $"api/notifications/{notificationId}/read",
+            content: null,
+            cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public async Task MarkAllNotificationsReadAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.PostAsync(
+            "api/notifications/read-all",
+            content: null,
+            cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
     private async Task<T> GetRequiredAsync<T>(string requestUri, CancellationToken cancellationToken)
     {
         await PrepareRequestAsync(cancellationToken);
