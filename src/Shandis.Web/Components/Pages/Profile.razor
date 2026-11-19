@@ -1,0 +1,209 @@
+@page "/profile"
+@inject Shandis.Web.Services.ShandisAuthService AuthService
+@inject Shandis.Web.Services.ShandisApiClient ApiClient
+
+<PageTitle>My Profile · Shandis</PageTitle>
+
+<div class="profile-settings-page">
+    <header class="page-heading">
+        <p class="eyebrow">YOUR IDENTITY</p>
+        <h1>My profile</h1>
+        <p>Choose how people recognise you across Shandis.</p>
+    </header>
+
+    @if (isLoading)
+    {
+        <div class="profile-panel loading-state">Loading your profile…</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(loadError))
+    {
+        <div class="profile-alert error">@loadError</div>
+    }
+    else
+    {
+        <div class="profile-settings-layout">
+            <section class="profile-panel">
+                <div class="profile-preview">
+                    @if (!string.IsNullOrWhiteSpace(profile?.ProfilePictureUrl))
+                    {
+                        <img src="@profile.ProfilePictureUrl" alt="Profile picture" />
+                    }
+                    else
+                    {
+                        <span>@Initials</span>
+                    }
+                    <div>
+                        <strong>@edit.DisplayName</strong>
+                        <small>@@@edit.UserName</small>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(feedback))
+                {
+                    <div class="profile-alert @(saveSucceeded ? "success" : "error")">@feedback</div>
+                }
+
+                <EditForm Model="edit" OnValidSubmit="SaveAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="field">
+                        <label for="username">Username</label>
+                        <div class="username-input"><span>@@</span><InputText id="username" @bind-Value="edit.UserName" maxlength="30" /></div>
+                        <small>3–30 characters. Use letters, numbers and underscores. This is how people can invite or find you.</small>
+                        <ValidationMessage For="@(() => edit.UserName)" />
+                    </div>
+
+                    <div class="field">
+                        <label for="display-name">Display name</label>
+                        <InputText id="display-name" @bind-Value="edit.DisplayName" maxlength="150" />
+                        <ValidationMessage For="@(() => edit.DisplayName)" />
+                    </div>
+
+                    <div class="name-grid">
+                        <div class="field">
+                            <label for="first-name">First name</label>
+                            <InputText id="first-name" @bind-Value="edit.FirstName" maxlength="100" />
+                            <ValidationMessage For="@(() => edit.FirstName)" />
+                        </div>
+                        <div class="field">
+                            <label for="last-name">Last name</label>
+                            <InputText id="last-name" @bind-Value="edit.LastName" maxlength="100" />
+                            <ValidationMessage For="@(() => edit.LastName)" />
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="bio">About you</label>
+                        <InputTextArea id="bio" @bind-Value="edit.Bio" maxlength="500" />
+                        <small>Tell your people a little about yourself. Up to 500 characters.</small>
+                    </div>
+
+                    <button class="save-button" type="submit" disabled="@isSaving">
+                        @(isSaving ? "Saving…" : "Save profile")
+                    </button>
+                </EditForm>
+            </section>
+
+            <aside class="profile-side">
+                <div class="side-card">
+                    <span class="side-icon">✳</span>
+                    <h2>Your Shandis identity</h2>
+                    <p>Your username is unique. Share it with friends so they can find and invite you without needing your email address.</p>
+                    <div class="handle-preview">@@@edit.UserName</div>
+                </div>
+                <div class="side-card muted-card">
+                    <h3>Profile picture</h3>
+                    <p>Profile picture upload is the next part of profile setup. Your initials will be shown until you add a photo.</p>
+                </div>
+            </aside>
+        </div>
+    }
+</div>
+
+<style>
+    .profile-settings-page{max-width:930px;margin:0 auto;padding:10px 0 60px;color:var(--shandis-text)}
+    .page-heading{margin-bottom:24px}.eyebrow{margin:0 0 7px;color:var(--shandis-primary);font-size:9px;font-weight:850;letter-spacing:.15em}
+    .page-heading h1{margin:0;font:850 clamp(28px,4vw,38px) Manrope,sans-serif;letter-spacing:-.045em}
+    .page-heading>p:last-child{margin:7px 0 0;color:var(--shandis-text-muted);font-size:11px}
+    .profile-settings-layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(230px,.8fr);gap:17px;align-items:start}
+    .profile-panel,.side-card{padding:21px;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:16px}
+    .profile-preview{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:17px;border-bottom:1px solid var(--shandis-border)}
+    .profile-preview>span,.profile-preview img{display:grid;place-items:center;width:54px;height:54px;border-radius:50%;object-fit:cover;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:17px;font-weight:850}
+    .profile-preview>div{display:grid;gap:4px}.profile-preview strong{font-size:13px}.profile-preview small{color:var(--shandis-text-muted);font-size:10px}
+    .field{display:grid;gap:7px;margin-bottom:16px}.field label{font-size:10px;font-weight:800}
+    .field input,.field textarea{width:100%;min-height:41px;padding:10px 12px;border:1px solid var(--shandis-border);border-radius:9px;background:var(--shandis-background);color:var(--shandis-text);font:inherit;font-size:11px;outline:none}
+    .field textarea{min-height:100px;resize:vertical}.field input:focus,.field textarea:focus{border-color:var(--shandis-primary)}
+    .field small{color:var(--shandis-text-muted);font-size:9px;line-height:1.5}
+    .field :deep(.validation-message),.profile-panel :deep(.validation-message),.profile-panel :deep(.validation-errors){color:#C34D55;font-size:9px}
+    .username-input{display:flex;align-items:center;gap:7px;padding-left:11px;border:1px solid var(--shandis-border);border-radius:9px;background:var(--shandis-background);color:var(--shandis-primary);font-size:11px;font-weight:850}
+    .username-input input{border:0;background:transparent;outline:none}.username-input:focus-within{border-color:var(--shandis-primary)}
+    .name-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .save-button{width:100%;padding:12px;border:0;border-radius:9px;background:var(--shandis-primary);color:white;font-size:11px;font-weight:850;cursor:pointer}
+    .save-button:disabled{opacity:.6;cursor:wait}
+    .profile-side{display:grid;gap:13px}.side-card{padding:17px}.side-icon{font-size:24px;color:var(--shandis-primary)}
+    .side-card h2{margin:10px 0 6px;font:850 15px Manrope,sans-serif}.side-card h3{margin:0 0 6px;font:850 12px Manrope,sans-serif}
+    .side-card p{margin:0;color:var(--shandis-text-muted);font-size:10px;line-height:1.7}
+    .handle-preview{margin-top:14px;padding:9px 11px;border-radius:8px;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:11px;font-weight:850}
+    .muted-card{background:var(--shandis-background)}
+    .profile-alert{margin-bottom:14px;padding:10px 12px;border-radius:8px;font-size:10px}.profile-alert.success{background:#E7F3EA;color:#287448}.profile-alert.error{background:#FBEAEA;color:#A63D43}
+    .loading-state{padding:35px;color:var(--shandis-text-muted);font-size:11px}
+    @@media(max-width:720px){.profile-settings-layout{grid-template-columns:1fr}.profile-side{grid-template-columns:1fr 1fr}}
+    @@media(max-width:480px){.profile-panel{padding:16px}.profile-side{grid-template-columns:1fr}.name-grid{grid-template-columns:1fr;gap:0}}
+</style>
+
+@code {
+    private UserProfileItem? profile;
+    private UpdateProfileRequest edit = new();
+    private bool isLoading = true;
+    private bool isSaving;
+    private bool saveSucceeded;
+    private string? loadError;
+    private string? feedback;
+
+    private string Initials
+    {
+        get
+        {
+            var name = string.IsNullOrWhiteSpace(edit.DisplayName) ? edit.UserName : edit.DisplayName;
+            var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length > 1
+                ? $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
+                : (name.Length > 0 ? name[..1].ToUpperInvariant() : "S");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await AuthService.InitializeAsync();
+        try
+        {
+            profile = await ApiClient.GetMyProfileAsync();
+            edit = new UpdateProfileRequest
+            {
+                UserName = profile.UserName,
+                FirstName = profile.FirstName,
+                LastName = profile.LastName,
+                DisplayName = profile.DisplayName,
+                Bio = profile.Bio
+            };
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (isSaving)
+            return;
+
+        isSaving = true;
+        feedback = null;
+        try
+        {
+            edit.UserName = edit.UserName.Trim().TrimStart('@').ToLowerInvariant();
+            profile = await ApiClient.UpdateMyProfileAsync(edit);
+            feedback = "Your profile has been updated.";
+            saveSucceeded = true;
+        }
+        catch (Exception ex)
+        {
+            feedback = ex.Message;
+            saveSucceeded = false;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}
