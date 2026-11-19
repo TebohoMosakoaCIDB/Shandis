@@ -78,7 +78,7 @@ public class InvitationRepository : IInvitationRepository
             cancellationToken);
     }
 
-    public async Task UpsertInvitationAsync(
+    public async Task<Guid> UpsertInvitationAsync(
         MemoryInvitation invitation,
         Guid? invitedUserId,
         CancellationToken cancellationToken = default)
@@ -95,13 +95,17 @@ public class InvitationRepository : IInvitationRepository
             .OrderBy(x => x.CreatedAtUtc)
             .ToListAsync(cancellationToken);
 
+        Guid persistedInvitationId;
+
         if (existingInvitations.Count == 0)
         {
             dbContext.MemoryInvitations.Add(invitation);
+            persistedInvitationId = invitation.Id;
         }
         else
         {
             var canonical = existingInvitations[0];
+            persistedInvitationId = canonical.Id;
             canonical.Reissue(
                 invitedUserId,
                 invitation.AssignedRole,
@@ -126,6 +130,7 @@ public class InvitationRepository : IInvitationRepository
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+        return persistedInvitationId;
     }
 
     public async Task AddAsync(
