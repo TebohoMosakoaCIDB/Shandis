@@ -2,7 +2,7 @@ namespace Shandis.Web.Models;
 
 public sealed class CreateInvitationRequest
 {
-    public string InvitedEmail { get; set; } = string.Empty;
+    public string Invitee { get; set; } = string.Empty;
     public int AssignedRole { get; set; } = 2;
 }
 
