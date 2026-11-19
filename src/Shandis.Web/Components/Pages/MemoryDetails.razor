@@ -196,6 +196,7 @@
                             }
                             <span class="tile-overlay">
                                 <span>♡ @item.Moment.LikeCount</span>
+                                <span>◯ @item.Moment.CommentCount</span>
                                 <span>↗ View</span>
                             </span>
                         </button>
@@ -262,9 +263,12 @@
                                         }
                                     </div>
                                 }
-                                else if (moment.Status == 4 && memory?.MyRole == 1)
+                                else if (moment.Status == 4)
                                 {
-                                    <span class="moment-rejected-label">Rejected contribution</span>
+                                    <div class="moment-rejected-label">
+                                        <strong>Contribution not approved</strong>
+                                        <span>This Moment is only visible to you and the Memory owner.</span>
+                                    </div>
                                 }
                                 @if (!string.IsNullOrWhiteSpace(moment.Title))
                                 {
@@ -288,7 +292,7 @@
                                         @moment.LikeCount @(moment.LikeCount == 1 ? "like" : "likes")
                                     </button>
                                     <button class="moment-action" @onclick="() => ToggleCommentsAsync(moment.Id)">
-                                        ◯ Comments
+                                        ◯ @moment.CommentCount @(moment.CommentCount == 1 ? "comment" : "comments")
                                     </button>
                                     <span class="moment-kind">@(moment.MomentType == 4 ? "STORY" : moment.MomentType == 5 ? "MIXED MOMENT" : "MOMENT")</span>
                                 </div>
@@ -398,7 +402,68 @@
                 {
                     <p class="lightbox-caption">@selectedGalleryItem.Moment.Content</p>
                 }
-                <div class="lightbox-footer">♡ @selectedGalleryItem.Moment.LikeCount likes</div>
+                <div class="lightbox-footer">
+                    <span>♡ @selectedGalleryItem.Moment.LikeCount likes</span>
+                    <span>◯ @selectedGalleryItem.Moment.CommentCount comments</span>
+                </div>
+                <section class="lightbox-comments" aria-label="Moment comments">
+                    <div class="lightbox-comments-heading">
+                        <strong>Comments</strong>
+                        <span>@selectedGalleryItem.Moment.CommentCount</span>
+                    </div>
+                    <div class="lightbox-comments-scroll">
+                        @if (galleryCommentsLoading)
+                        {
+                            <p class="comments-state">Loading comments…</p>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(galleryCommentsError))
+                        {
+                            <p class="comments-error">@galleryCommentsError</p>
+                        }
+                        else if (galleryComments.Count == 0)
+                        {
+                            <p class="comments-state">No comments yet. Start the conversation.</p>
+                        }
+                        else
+                        {
+                            @foreach (var comment in galleryComments)
+                            {
+                                <div class="moment-comment" @key="comment.Id">
+                                    <div class="comment-avatar">@Initials(comment.AuthorName)</div>
+                                    <div class="comment-body">
+                                        <div class="comment-heading">
+                                            <strong>@comment.AuthorName</strong>
+                                            <span>@comment.CreatedAtUtc.ToLocalTime().ToString("d MMM · HH:mm")</span>
+                                        </div>
+                                        <p>@comment.Content</p>
+                                        @foreach (var reply in comment.Replies)
+                                        {
+                                            <div class="comment-reply" @key="reply.Id">
+                                                <strong>@reply.AuthorName</strong>
+                                                <span>@reply.Content</span>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(galleryCommentError))
+                    {
+                        <p class="comments-error">@galleryCommentError</p>
+                    }
+                    <div class="comment-composer lightbox-comment-composer">
+                        <input @bind="galleryNewCommentContent"
+                               @bind:event="oninput"
+                               maxlength="2000"
+                               placeholder="Add a comment…" />
+                        <button class="shandis-btn shandis-btn-primary"
+                                @onclick="PostGalleryCommentAsync"
+                                disabled="@(string.IsNullOrWhiteSpace(galleryNewCommentContent) || galleryCommentPosting)">
+                            @(galleryCommentPosting ? "Posting…" : "Post")
+                        </button>
+                    </div>
+                </section>
             </aside>
         </div>
         @if (selectedGalleryIndex < galleryItems.Count - 1)
@@ -504,6 +569,15 @@
     .moment-action.like-action.is-liked{color:#D65F67}
     .moment-kind{margin-left:auto;color:var(--shandis-text-muted);font-size:8px;font-weight:850;letter-spacing:.1em}
     .moment-comments{margin-top:13px;padding:13px;background:var(--shandis-surface-muted);border-radius:12px}
+    .moment-rejected-label{display:flex;flex-direction:column;gap:3px;margin:9px 0;padding:10px 12px;border:1px solid rgba(190,74,82,.25);border-radius:10px;background:rgba(190,74,82,.07);color:#B84C55;font-size:10px}
+    .moment-rejected-label span{color:var(--shandis-text-muted);font-size:9px;font-weight:500}
+    .lightbox-footer{display:flex;gap:16px;flex-wrap:wrap}
+    .lightbox-comments{display:flex;flex-direction:column;min-height:0;margin-top:12px;border-top:1px solid var(--shandis-border);padding-top:10px}
+    .lightbox-comments-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:10px}
+    .lightbox-comments-heading span{color:var(--shandis-text-muted);font-size:9px}
+    .lightbox-comments-scroll{min-height:70px;max-height:230px;overflow-y:auto;overscroll-behavior:contain;padding:3px 5px 3px 0}
+    .lightbox-comment-composer{flex:0 0 auto;padding-top:8px;border-top:1px solid var(--shandis-border)}
+    .lightbox-details{display:flex;flex-direction:column;min-height:0;overflow:hidden}
     .comments-state,.comments-error{margin:0 0 10px;color:var(--shandis-text-muted);font-size:10px}
     .comments-error{color:#C34D55}
     .moment-comment{display:flex;gap:8px;margin:0 0 12px}
@@ -520,7 +594,7 @@
     .comment-composer input:focus{border-color:var(--shandis-primary)}
     .comment-composer .shandis-btn{padding:8px 13px;font-size:9px}
     @@keyframes spin{to{transform:rotate(360deg)}}
-    @@media(max-width:760px){.memory-details-page{padding:10px 14px 85px}.memory-profile-content{gap:12px;padding:0 16px 16px}.memory-profile-avatar{flex-basis:68px;width:68px;height:68px;font-size:19px}.memory-profile-count{padding:8px 10px}.memory-profile-actions{padding:10px 16px}.memory-profile-art{height:110px;padding:18px}.profile-art-mark{font-size:40px}.profile-art-label{font-size:7px}.lightbox-content{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto;height:min(780px,90vh);max-width:600px}.lightbox-details{max-height:190px;overflow:auto;padding:13px}.lightbox-author{padding:9px 0}.lightbox-details h3{margin:10px 0 3px}.lightbox-footer{padding-top:8px}.gallery-lightbox{padding:35px 10px}.lightbox-nav{width:32px;height:32px;font-size:23px}}
+    @@media(max-width:760px){.memory-details-page{padding:10px 14px 85px}.memory-profile-content{gap:12px;padding:0 16px 16px}.memory-profile-avatar{flex-basis:68px;width:68px;height:68px;font-size:19px}.memory-profile-count{padding:8px 10px}.memory-profile-actions{padding:10px 16px}.memory-profile-art{height:110px;padding:18px}.profile-art-mark{font-size:40px}.profile-art-label{font-size:7px}.lightbox-content{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(220px,45%);height:min(850px,92vh);max-width:600px}.lightbox-details{max-height:none;overflow:hidden;padding:13px}.lightbox-comments-scroll{max-height:125px}.lightbox-author{padding:9px 0}.lightbox-details h3{margin:10px 0 3px}.lightbox-footer{padding-top:8px}.gallery-lightbox{padding:35px 10px}.lightbox-nav{width:32px;height:32px;font-size:23px}}
     @@media(max-width:650px){.invitation-panel{padding:17px}.invitation-form{grid-template-columns:1fr}.invitation-form button{justify-self:start}}
     @@media(max-width:500px){.memory-profile-content{align-items:flex-start;flex-wrap:wrap}.memory-profile-count{margin-left:auto;border-left:0}.memory-profile-main{flex-basis:calc(100% - 85px)}.memory-profile-main h1{font-size:22px}.memory-profile-actions{gap:13px}.section-heading{align-items:flex-start;flex-direction:column}.gallery-filters{align-self:flex-start}.gallery-grid{gap:2px}.gallery-lightbox{padding:30px 6px}.lightbox-content{height:90vh}.lightbox-close{top:4px;right:10px}}
 </style>
@@ -538,6 +612,12 @@
     private string galleryFilter = "all";
     private GalleryItem? selectedGalleryItem;
     private int selectedGalleryIndex;
+    private List<Shandis.Web.Models.MomentCommentItem> galleryComments = [];
+    private string galleryNewCommentContent = string.Empty;
+    private bool galleryCommentsLoading;
+    private bool galleryCommentPosting;
+    private string? galleryCommentsError;
+    private string? galleryCommentError;
     private int momentsPage = 1;
     private const int PageSize = 20;
     private int momentsTotal;
@@ -803,33 +883,114 @@
         selectedGalleryItem = null;
     }
 
-    private void OpenGallery(GalleryItem item)
+    private async Task OpenGallery(GalleryItem item)
     {
         selectedGalleryItem = item;
         selectedGalleryIndex = galleryItems.FindIndex(candidate => candidate.Media.Id == item.Media.Id);
+        galleryNewCommentContent = string.Empty;
+        galleryCommentError = null;
+        await LoadGalleryCommentsAsync(item.Moment.Id);
     }
 
-    private void OpenMomentFirstMedia(Shandis.Web.Models.MomentItem moment)
+    private async Task OpenMomentFirstMedia(Shandis.Web.Models.MomentItem moment)
     {
         var item = galleryItems.FirstOrDefault(candidate => candidate.Moment.Id == moment.Id);
         if (item is not null)
-            OpenGallery(item);
+            await OpenGallery(item);
     }
 
-    private void CloseGallery() => selectedGalleryItem = null;
+    private void CloseGallery()
+    {
+        selectedGalleryItem = null;
+        galleryComments = [];
+        galleryCommentsError = null;
+        galleryCommentError = null;
+    }
 
-    private void PreviousGalleryItem()
+    private async Task PreviousGalleryItem()
     {
         if (selectedGalleryIndex <= 0) return;
         selectedGalleryIndex--;
         selectedGalleryItem = galleryItems[selectedGalleryIndex];
+        galleryNewCommentContent = string.Empty;
+        await LoadGalleryCommentsAsync(selectedGalleryItem.Moment.Id);
     }
 
-    private void NextGalleryItem()
+    private async Task NextGalleryItem()
     {
         if (selectedGalleryIndex >= galleryItems.Count - 1) return;
         selectedGalleryIndex++;
         selectedGalleryItem = galleryItems[selectedGalleryIndex];
+        galleryNewCommentContent = string.Empty;
+        await LoadGalleryCommentsAsync(selectedGalleryItem.Moment.Id);
+    }
+
+    private async Task LoadGalleryCommentsAsync(Guid momentId)
+    {
+        galleryComments = [];
+        galleryCommentsError = null;
+        galleryCommentsLoading = true;
+
+        try
+        {
+            var page = 1;
+            var totalPages = 1;
+            const int commentsPageSize = 100;
+
+            while (page <= totalPages)
+            {
+                var result = await ApiClient.GetMomentCommentsAsync(
+                    momentId,
+                    page,
+                    commentsPageSize);
+
+                if (selectedGalleryItem?.Moment.Id != momentId)
+                    return;
+
+                galleryComments.AddRange(result.Comments);
+                totalPages = result.TotalPages;
+                page++;
+            }
+        }
+        catch
+        {
+            galleryCommentsError = "Comments couldn't be loaded. Please try again.";
+        }
+        finally
+        {
+            galleryCommentsLoading = false;
+        }
+    }
+
+    private async Task PostGalleryCommentAsync()
+    {
+        if (selectedGalleryItem is null ||
+            string.IsNullOrWhiteSpace(galleryNewCommentContent) ||
+            galleryCommentPosting)
+            return;
+
+        galleryCommentPosting = true;
+        galleryCommentError = null;
+
+        try
+        {
+            var moment = selectedGalleryItem.Moment;
+            var created = await ApiClient.CreateMomentCommentAsync(
+                moment.Id,
+                galleryNewCommentContent.Trim());
+
+            galleryComments.Add(created);
+            moment.CommentCount++;
+            galleryNewCommentContent = string.Empty;
+        }
+        catch
+        {
+            galleryCommentError = "Your comment couldn't be posted. Please try again.";
+        }
+        finally
+        {
+            galleryCommentPosting = false;
+        }
     }
 
     private static string Initials(string title)
