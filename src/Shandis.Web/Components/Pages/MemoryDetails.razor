@@ -934,10 +934,10 @@
         try
         {
             var page = 1;
-            var totalPages = 1;
+            var totalCount = 0;
             const int commentsPageSize = 100;
 
-            while (page <= totalPages)
+            do
             {
                 var result = await ApiClient.GetMomentCommentsAsync(
                     momentId,
@@ -948,9 +948,10 @@
                     return;
 
                 galleryComments.AddRange(result.Comments);
-                totalPages = result.TotalPages;
+                totalCount = result.TotalCount;
                 page++;
             }
+            while ((page - 1) * commentsPageSize < totalCount);
         }
         catch
         {
