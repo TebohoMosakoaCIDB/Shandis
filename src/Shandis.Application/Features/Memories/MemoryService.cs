@@ -209,6 +209,33 @@ public class MemoryService : IMemoryService
         };
     }
 
+    public async Task<bool> PublishAsync(
+        Guid memoryId,
+        Guid requestingUserId,
+        CancellationToken cancellationToken = default)
+    {
+        if (memoryId == Guid.Empty)
+            throw new ArgumentException("A valid Memory ID is required.", nameof(memoryId));
+
+        if (requestingUserId == Guid.Empty)
+            throw new ArgumentException("A valid user ID is required.", nameof(requestingUserId));
+
+        var memory = await _memoryRepository.GetByIdAsync(
+            memoryId,
+            cancellationToken);
+
+        if (memory is null || memory.OwnerId != requestingUserId)
+            return false;
+
+        memory.Publish();
+
+        await _memoryRepository.UpdateAsync(
+            memory,
+            cancellationToken);
+
+        return true;
+    }
+
     public async Task<bool> ArchiveAsync(
         Guid memoryId,
         Guid requestingUserId,
