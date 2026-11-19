@@ -34,9 +34,9 @@ public sealed class NotificationRepository(IDbContextFactory<ShandisDbContext> c
                 ActorUserId = notification.ActorUserId,
                 ActorName = actor == null
                     ? null
-                    : (!string.IsNullOrWhiteSpace(actor.DisplayName)
+                    : (actor.DisplayName != null && actor.DisplayName != ""
                         ? actor.DisplayName
-                        : (actor.FirstName + " " + actor.LastName).Trim()),
+                        : actor.FirstName + " " + actor.LastName),
                 Type = notification.Type,
                 Title = notification.Title,
                 Message = notification.Message,
