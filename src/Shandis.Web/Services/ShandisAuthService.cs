@@ -21,7 +21,6 @@ public sealed class ShandisAuthService
     public bool IsAuthenticated { get; private set; }
     public string? CurrentUserEmail { get; private set; }
 
-    // Register the token check once. ShandisApiClient invokes it before protected API calls.
     public ShandisAuthService(ShandisApiClient apiClient, IJSRuntime js)
     {
         this.apiClient = apiClient;
@@ -68,13 +67,14 @@ public sealed class ShandisAuthService
     }
 
     public async Task<(bool Success, string? Error)> RegisterAsync(
+        string userName,
         string email,
         string password,
         CancellationToken cancellationToken = default)
     {
         using var response = await apiClient.HttpClient.PostAsJsonAsync(
-            "api/auth/register",
-            new { email, password },
+            "api/accounts/register",
+            new { userName, email, password },
             cancellationToken);
 
         if (response.IsSuccessStatusCode)
@@ -124,7 +124,6 @@ public sealed class ShandisAuthService
         if (!IsAuthenticated)
             throw new UnauthorizedAccessException("You are not signed in. Please sign in again.");
 
-        // Refresh shortly before expiry to avoid a token expiring during an API request.
         if (accessTokenExpiresAt is not null &&
             accessTokenExpiresAt.Value > DateTimeOffset.UtcNow.AddMinutes(2))
         {
@@ -134,7 +133,6 @@ public sealed class ShandisAuthService
         await refreshLock.WaitAsync(cancellationToken);
         try
         {
-            // Another request may have refreshed while this request waited.
             if (accessTokenExpiresAt is not null &&
                 accessTokenExpiresAt.Value > DateTimeOffset.UtcNow.AddMinutes(2))
             {
@@ -248,10 +246,18 @@ public sealed class ShandisAuthService
 
             if (document.RootElement.TryGetProperty("detail", out var detail))
                 return detail.GetString() ?? body;
+
+            if (document.RootElement.TryGetProperty("message", out var message))
+                return message.GetString() ?? body;
+
+            if (document.RootElement.TryGetProperty("errors", out var errorsElement) &&
+                errorsElement.ValueKind == JsonValueKind.Array)
+            {
+                return string.Join(" ", errorsElement.EnumerateArray().Select(x => x.GetString()));
+            }
         }
         catch (JsonException)
         {
-            // Return the raw response when it isn't JSON.
         }
 
         return body;
