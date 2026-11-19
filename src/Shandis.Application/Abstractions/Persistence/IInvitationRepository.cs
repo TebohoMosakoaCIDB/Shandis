@@ -12,6 +12,10 @@ public interface IInvitationRepository
         string email,
         CancellationToken cancellationToken = default);
 
+    Task<Guid?> FindUserIdByUserNameAsync(
+        string userName,
+        CancellationToken cancellationToken = default);
+
     Task<bool> HasPendingInvitationAsync(
         Guid memoryId,
         string email,
