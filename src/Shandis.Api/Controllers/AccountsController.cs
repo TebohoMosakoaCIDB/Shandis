@@ -12,9 +12,9 @@ public sealed class AccountsController : ControllerBase
 {
     private static readonly HashSet<string> ReservedUserNames =
     [
-        "admin", "api", "help", "login", "logout", "memories",
+        "admin", "api", "help", "login", "logout", "members", "memories",
         "notifications", "privacy", "profile", "register", "search",
-        "settings", "shared", "shandis", "support", "terms"
+        "settings", "shared", "shandis", "support", "terms", "u"
     ];
 
     private readonly UserManager<ShandisUser> _userManager;
