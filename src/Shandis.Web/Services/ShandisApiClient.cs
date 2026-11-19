@@ -46,6 +46,41 @@ public sealed class ShandisApiClient(HttpClient httpClient)
             "api/profile/me",
             cancellationToken);
 
+    public async Task<UserProfileItem> UpdateMyProfileAsync(
+        UpdateProfileRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.PutAsJsonAsync("api/profile/me", request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+
+        return await response.Content.ReadFromJsonAsync<UserProfileItem>(cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException("The Shandis API returned an empty profile response.");
+    }
+
+    public async Task<List<MemberSearchItem>> SearchMembersAsync(
+        string query,
+        CancellationToken cancellationToken = default)
+        => await GetRequiredAsync<List<MemberSearchItem>>(
+            $"api/profile/search?q={Uri.EscapeDataString(query)}",
+            cancellationToken);
+
+    public async Task<UserProfileItem?> GetUserProfileAsync(
+        string userName,
+        CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.GetAsync(
+            $"api/profile/{Uri.EscapeDataString(userName)}",
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+
+        await EnsureSuccessAsync(response, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<UserProfileItem>(cancellationToken: cancellationToken);
+    }
+
     public async Task<CreatedMemoryResponse> CreateMemoryAsync(
         CreateMemoryRequest request,
         CancellationToken cancellationToken = default)
