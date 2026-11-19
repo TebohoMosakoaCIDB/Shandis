@@ -1,3 +1,4 @@
+@implements IAsyncDisposable
 @inject Shandis.Web.Services.ShandisApiClient ApiClient
 @inject NavigationManager Navigation
 
@@ -71,6 +72,8 @@
     private bool isOpen;
     private bool isLoading;
     private int unreadCount;
+    private readonly CancellationTokenSource refreshCancellation = new();
+    private Task? refreshTask;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -78,7 +81,48 @@
         {
             await LoadAsync();
             StateHasChanged();
+            refreshTask = RefreshNotificationsPeriodicallyAsync();
         }
+    }
+
+    private async Task RefreshNotificationsPeriodicallyAsync()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(refreshCancellation.Token))
+            {
+                await InvokeAsync(async () =>
+                {
+                    await LoadAsync(showLoading: false);
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The component is being disposed.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await refreshCancellation.CancelAsync();
+
+        if (refreshTask is not null)
+        {
+            try
+            {
+                await refreshTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected during disposal.
+            }
+        }
+
+        refreshCancellation.Dispose();
     }
 
     private async Task ToggleAsync()
@@ -88,9 +132,11 @@
             await LoadAsync();
     }
 
-    private async Task LoadAsync()
+    private async Task LoadAsync(bool showLoading = true)
     {
-        isLoading = true;
+        if (showLoading)
+            isLoading = true;
+
         try
         {
             var result = await ApiClient.GetNotificationsAsync();
@@ -104,7 +150,8 @@
         }
         finally
         {
-            isLoading = false;
+            if (showLoading)
+                isLoading = false;
         }
     }
 
