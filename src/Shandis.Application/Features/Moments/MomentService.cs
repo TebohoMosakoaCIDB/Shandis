@@ -525,10 +525,23 @@ public class MomentService : IMomentService
             TotalCount = totalCount
         };
 
+        var commentCounts = await _momentRepository.GetCommentCountsAsync(
+            moments.Select(moment => moment.Id).ToArray(),
+            cancellationToken);
+
         foreach (var moment in moments)
         {
-            result.Moments.Add(
-                await MapResultAsync(moment, cancellationToken, userId));
+            var momentResult = await MapResultAsync(
+                moment,
+                cancellationToken,
+                userId);
+
+            momentResult.CommentCount =
+                commentCounts.TryGetValue(moment.Id, out var commentCount)
+                    ? commentCount
+                    : 0;
+
+            result.Moments.Add(momentResult);
         }
 
         return result;
