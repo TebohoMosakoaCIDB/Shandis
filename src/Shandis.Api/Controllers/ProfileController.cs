@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Shandis.Api.Contracts.Profiles;
@@ -11,6 +11,13 @@ namespace Shandis.Api.Controllers;
 [Authorize]
 public class ProfileController : ControllerBase
 {
+    private static readonly HashSet<string> ReservedUserNames =
+    [
+        "admin", "api", "help", "login", "logout", "memories",
+        "notifications", "privacy", "profile", "register", "search",
+        "settings", "shared", "shandis", "support", "terms"
+    ];
+
     private readonly UserManager<ShandisUser> _userManager;
 
     public ProfileController(UserManager<ShandisUser> userManager)
@@ -38,6 +45,21 @@ public class ProfileController : ControllerBase
         if (user == null)
             return Unauthorized();
 
+        var userName = request.UserName.Trim().ToLowerInvariant();
+
+        if (ReservedUserNames.Contains(userName))
+            return BadRequest(new { message = "That username is reserved. Please choose another one." });
+
+        var userNameResult = await _userManager.SetUserNameAsync(user, userName);
+
+        if (!userNameResult.Succeeded)
+        {
+            return BadRequest(new
+            {
+                errors = userNameResult.Errors.Select(x => x.Description)
+            });
+        }
+
         user.FirstName = request.FirstName.Trim();
         user.LastName = request.LastName.Trim();
         user.DisplayName = request.DisplayName.Trim();
@@ -63,6 +85,7 @@ public class ProfileController : ControllerBase
         return new UserProfileResponse
         {
             Id = user.Id,
+            UserName = user.UserName ?? string.Empty,
             FirstName = user.FirstName,
             LastName = user.LastName,
             DisplayName = user.DisplayName ?? string.Empty,
