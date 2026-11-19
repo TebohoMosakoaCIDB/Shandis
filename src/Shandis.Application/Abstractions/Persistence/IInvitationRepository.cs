@@ -21,6 +21,11 @@ public interface IInvitationRepository
         string email,
         CancellationToken cancellationToken = default);
 
+    Task UpsertInvitationAsync(
+        MemoryInvitation invitation,
+        Guid? invitedUserId,
+        CancellationToken cancellationToken = default);
+
     Task AddAsync(
         MemoryInvitation invitation,
         CancellationToken cancellationToken = default);
