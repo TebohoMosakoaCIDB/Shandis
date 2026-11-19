@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Shandis.Api.Contracts.Profiles;
 using Shandis.Infrastructure.Identity;
 
@@ -32,6 +33,52 @@ public class ProfileController : ControllerBase
 
         if (user == null)
             return Unauthorized();
+
+        return Ok(MapProfile(user));
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchMembers([FromQuery] string? q)
+    {
+        var term = q?.Trim();
+
+        if (string.IsNullOrWhiteSpace(term) || term.Length < 2)
+            return Ok(Array.Empty<MemberSearchResponse>());
+
+        var currentUser = await _userManager.GetUserAsync(User);
+        var normalizedTerm = term.TrimStart('@').ToLowerInvariant();
+
+        if (normalizedTerm.Length < 2)
+            return Ok(Array.Empty<MemberSearchResponse>());
+
+        var members = await _userManager.Users
+            .AsNoTracking()
+            .Where(user =>
+                user.Id != currentUser!.Id &&
+                user.IsActive &&
+                ((user.UserName ?? string.Empty).ToLower().Contains(normalizedTerm) ||
+                 (user.DisplayName ?? string.Empty).ToLower().Contains(normalizedTerm)))
+            .OrderBy(user => user.UserName)
+            .Take(20)
+            .Select(user => new MemberSearchResponse
+            {
+                Id = user.Id,
+                UserName = user.UserName ?? string.Empty,
+                DisplayName = user.DisplayName ?? user.UserName ?? string.Empty,
+                ProfilePictureUrl = user.ProfilePictureUrl
+            })
+            .ToListAsync();
+
+        return Ok(members);
+    }
+
+    [HttpGet("{userName}")]
+    public async Task<IActionResult> GetProfileByUserName(string userName)
+    {
+        var user = await _userManager.FindByNameAsync(userName.Trim().TrimStart('@'));
+
+        if (user is null || !user.IsActive)
+            return NotFound();
 
         return Ok(MapProfile(user));
     }
