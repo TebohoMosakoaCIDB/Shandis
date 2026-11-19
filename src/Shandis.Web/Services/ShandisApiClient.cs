@@ -53,6 +53,18 @@ public sealed class ShandisApiClient(HttpClient httpClient)
             ?? throw new InvalidOperationException("The Shandis API returned an empty Memory response.");
     }
 
+    public async Task PublishMemoryAsync(
+        Guid memoryId,
+        CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.PostAsync(
+            $"api/memories/{memoryId}/publish",
+            content: null,
+            cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
     public async Task<MyMemoriesResponse> GetMyMemoriesAsync(
         int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
         => await GetRequiredAsync<MyMemoriesResponse>(
