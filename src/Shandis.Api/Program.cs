@@ -76,6 +76,19 @@ await using (var scope = app.Services.CreateAsyncScope())
         .GetRequiredService<ShandisDbContext>();
 
     await MemoryCategorySeeder.SeedAsync(dbContext);
+
+    if (app.Environment.IsDevelopment())
+    {
+        var userManager = scope.ServiceProvider
+            .GetRequiredService<UserManager<ShandisUser>>();
+
+        var testPassword = builder.Configuration["DevelopmentUsers:Password"]
+            ?? "Shandis123!";
+
+        await DevelopmentUserSeeder.SeedAsync(
+            userManager,
+            testPassword);
+    }
 }
 
 // HTTP pipeline
