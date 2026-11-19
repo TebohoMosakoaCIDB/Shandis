@@ -100,12 +100,21 @@
         }
     }
 
-    private string CurrentUserLabel =>
-        !string.IsNullOrWhiteSpace(currentUser?.DisplayName)
-            ? currentUser.DisplayName
-            : $"{currentUser?.FirstName} {currentUser?.LastName}".Trim() is { Length: > 0 } fullName
-                ? fullName
-                : currentUser?.Email ?? "Signed in";
+    private string CurrentUserLabel
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(currentUser?.DisplayName))
+                return currentUser.DisplayName;
+
+            var fullName = $"{currentUser?.FirstName} {currentUser?.LastName}".Trim();
+
+            if (!string.IsNullOrWhiteSpace(fullName))
+                return fullName;
+
+            return currentUser?.Email ?? "Signed in";
+        }
+    }
 
     private string CurrentUserInitials
     {
