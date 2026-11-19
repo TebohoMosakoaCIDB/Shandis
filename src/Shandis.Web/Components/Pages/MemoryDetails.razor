@@ -212,6 +212,14 @@
                     <p>Every perspective adds something to the memory.</p>
                 </div>
             </div>
+            @if (memory?.MyRole == 1 && moments.Any(moment => moment.Status == 2))
+            {
+                <p class="moderation-help">You have @moments.Count(moment => moment.Status == 2) contribution(s) waiting for approval. Approve them to make them visible to everyone who can view this Memory.</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(moderationMessage))
+            {
+                <p class="invitation-feedback @(moderationIsError ? "is-error" : "is-success")">@moderationMessage</p>
+            }
 
             @if (moments.Count == 0)
             {
@@ -233,6 +241,31 @@
                                     <strong>Shandis contributor</strong>
                                     <span>@(moment.HappenedAtUtc?.ToLocalTime().ToString("d MMM yyyy · HH:mm") ?? moment.CreatedAtUtc.ToLocalTime().ToString("d MMM yyyy · HH:mm"))</span>
                                 </div>
+                                @if (moment.Status == 2)
+                                {
+                                    <div class="moment-moderation">
+                                        <span class="moment-pending-label">Awaiting your approval</span>
+                                        @if (memory?.MyRole == 1)
+                                        {
+                                            <div class="moment-moderation-actions">
+                                                <button class="shandis-btn shandis-btn-primary"
+                                                        @onclick="() => ModerateMomentAsync(moment.Id, approve: true)"
+                                                        disabled="@moderatingMomentIds.Contains(moment.Id)">
+                                                    @(moderatingMomentIds.Contains(moment.Id) ? "Saving…" : "Approve")
+                                                </button>
+                                                <button class="shandis-btn shandis-btn-secondary"
+                                                        @onclick="() => ModerateMomentAsync(moment.Id, approve: false)"
+                                                        disabled="@moderatingMomentIds.Contains(moment.Id)">
+                                                    Reject
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else if (moment.Status == 4 && memory?.MyRole == 1)
+                                {
+                                    <span class="moment-rejected-label">Rejected contribution</span>
+                                }
                                 @if (!string.IsNullOrWhiteSpace(moment.Title))
                                 {
                                     <h3>@moment.Title</h3>
@@ -808,6 +841,43 @@
             : $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
     }
 
+    private async Task ModerateMomentAsync(Guid momentId, bool approve)
+    {
+        if (memory?.MyRole != 1 || !moderatingMomentIds.Add(momentId))
+            return;
+
+        moderationMessage = null;
+        moderationIsError = false;
+
+        try
+        {
+            if (approve)
+                await ApiClient.ApproveMomentAsync(momentId);
+            else
+                await ApiClient.RejectMomentAsync(momentId);
+
+            var result = await ApiClient.GetMomentsAsync(MemoryId, 1, PageSize);
+            moments = result.Moments;
+            momentsPage = result.Page;
+            momentsTotal = result.TotalCount;
+            momentsTotalPages = result.TotalPages;
+            RebuildGallery();
+
+            moderationMessage = approve
+                ? "Contribution approved. It is now visible to people who can view this Memory."
+                : "Contribution rejected. It will not be shown to other viewers.";
+        }
+        catch (Exception ex)
+        {
+            moderationIsError = true;
+            moderationMessage = ex.Message;
+        }
+        finally
+        {
+            moderatingMomentIds.Remove(momentId);
+        }
+    }
+
     private async Task LoadMoreMomentsAsync()
     {
         if (isLoadingMore || momentsPage >= momentsTotalPages)
@@ -830,6 +900,9 @@
     }
 
     private readonly HashSet<Guid> busyMomentIds = [];
+    private readonly HashSet<Guid> moderatingMomentIds = [];
+    private string? moderationMessage;
+    private bool moderationIsError;
     private Guid? activeCommentsMomentId;
     private List<Shandis.Web.Models.MomentCommentItem> activeComments = [];
     private string newCommentContent = string.Empty;
