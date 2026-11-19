@@ -197,7 +197,7 @@ public sealed class ShandisApiClient(HttpClient httpClient)
 
     public async Task<InvitationItem> CreateInvitationAsync(
         Guid memoryId,
-        string invitedEmail,
+        string invitee,
         int assignedRole,
         CancellationToken cancellationToken = default)
     {
@@ -206,7 +206,7 @@ public sealed class ShandisApiClient(HttpClient httpClient)
             $"api/memories/{memoryId}/invitations",
             new CreateInvitationRequest
             {
-                InvitedEmail = invitedEmail,
+                Invitee = invitee,
                 AssignedRole = assignedRole
             },
             cancellationToken);
