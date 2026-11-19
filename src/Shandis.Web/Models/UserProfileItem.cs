@@ -3,6 +3,7 @@ namespace Shandis.Web.Models;
 public sealed class UserProfileItem
 {
     public Guid Id { get; set; }
+    public string UserName { get; set; } = string.Empty;
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
