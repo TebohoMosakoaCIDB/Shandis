@@ -1,0 +1,124 @@
+@page "/members"
+@inject Shandis.Web.Services.ShandisAuthService AuthService
+@inject Shandis.Web.Services.ShandisApiClient ApiClient
+
+<PageTitle>Find People · Shandis</PageTitle>
+
+<div class="members-page">
+    <header class="members-heading">
+        <p class="eyebrow">YOUR PEOPLE, ALL IN ONE PLACE</p>
+        <h1>Find your people.</h1>
+        <p>Search Shandis by username or display name, then invite them into a Memory.</p>
+    </header>
+
+    <form class="member-search" @onsubmit="SearchAsync" @onsubmit:preventDefault>
+        <span>⌕</span>
+        <input @bind="query" @bind:event="oninput" placeholder="Search by name or @@username…" aria-label="Search members" />
+        <button type="submit" disabled="@isSearching">@(isSearching ? "Searching…" : "Search")</button>
+    </form>
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="search-feedback error">@errorMessage</div>
+    }
+    else if (hasSearched && results.Count == 0 && !isSearching)
+    {
+        <div class="empty-results"><span>⌕</span><h2>No members found</h2><p>Try another name or username. Search needs at least two characters.</p></div>
+    }
+    else if (results.Count > 0)
+    {
+        <div class="results-heading"><strong>Members</strong><span>@results.Count result@(results.Count == 1 ? "" : "s")</span></div>
+        <div class="member-results">
+            @foreach (var member in results)
+            {
+                <a class="member-card" href="@($"/u/{Uri.EscapeDataString(member.UserName)}")" @key="member.Id">
+                    @if (!string.IsNullOrWhiteSpace(member.ProfilePictureUrl))
+                    {
+                        <img src="@member.ProfilePictureUrl" alt="" />
+                    }
+                    else
+                    {
+                        <span class="member-avatar">@GetInitials(member.DisplayName)</span>
+                    }
+                    <span class="member-copy"><strong>@member.DisplayName</strong><small>@@@member.UserName</small></span>
+                    <span class="member-arrow">→</span>
+                </a>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="empty-results"><span>✳</span><h2>Who are you looking for?</h2><p>Enter at least two characters to find people on Shandis.</p></div>
+    }
+</div>
+
+<style>
+    .members-page{max-width:820px;margin:0 auto;padding:10px 0 60px;color:var(--shandis-text)}
+    .eyebrow{margin:0 0 7px;color:var(--shandis-primary);font-size:9px;font-weight:850;letter-spacing:.15em}
+    .members-heading h1{margin:0;font:850 clamp(28px,4vw,38px) Manrope,sans-serif;letter-spacing:-.045em}
+    .members-heading>p:last-child{margin:8px 0 24px;color:var(--shandis-text-muted);font-size:11px}
+    .member-search{display:flex;align-items:center;gap:10px;padding:8px 9px 8px 14px;border:1px solid var(--shandis-border);border-radius:12px;background:var(--shandis-surface)}
+    .member-search>span{color:var(--shandis-primary);font-size:20px}.member-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--shandis-text);font:inherit;font-size:11px}
+    .member-search button{padding:10px 16px;border:0;border-radius:8px;background:var(--shandis-primary);color:white;font-size:10px;font-weight:850;cursor:pointer}.member-search button:disabled{opacity:.6}
+    .results-heading{display:flex;justify-content:space-between;margin:25px 2px 10px}.results-heading strong{font-size:12px}.results-heading span{color:var(--shandis-text-muted);font-size:9px}
+    .member-results{display:grid;gap:8px}.member-card{display:flex;align-items:center;gap:12px;padding:13px;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:12px;text-decoration:none;color:inherit;transition:border-color .15s}
+    .member-card:hover{border-color:var(--shandis-primary)}.member-card img,.member-avatar{display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;border-radius:50%;object-fit:cover;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:12px;font-weight:850}
+    .member-copy{display:grid;gap:4px;flex:1}.member-copy strong{font-size:11px}.member-copy small{color:var(--shandis-text-muted);font-size:9px}.member-arrow{color:var(--shandis-primary);font-size:16px}
+    .empty-results{display:flex;flex-direction:column;align-items:center;text-align:center;padding:55px 20px;margin-top:18px;border:1px dashed var(--shandis-border);border-radius:15px}
+    .empty-results>span{color:var(--shandis-primary);font-size:30px}.empty-results h2{margin:10px 0 3px;font:850 17px Manrope,sans-serif}.empty-results p{margin:0;color:var(--shandis-text-muted);font-size:10px}
+    .search-feedback{margin-top:15px;font-size:10px}.search-feedback.error{color:#C34D55}
+    @@media(max-width:500px){.member-search{gap:7px;padding-left:10px}.member-search button{padding:9px 11px}}
+</style>
+
+@code {
+    private string query = string.Empty;
+    private List<MemberSearchItem> results = [];
+    private bool isSearching;
+    private bool hasSearched;
+    private string? errorMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await AuthService.InitializeAsync();
+    }
+
+    private async Task SearchAsync()
+    {
+        if (isSearching)
+            return;
+
+        if (query.Trim().TrimStart('@').Length < 2)
+        {
+            results = [];
+            hasSearched = true;
+            errorMessage = "Enter at least two characters to search.";
+            return;
+        }
+
+        isSearching = true;
+        errorMessage = null;
+        hasSearched = true;
+        try
+        {
+            results = await ApiClient.SearchMembersAsync(query.Trim());
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            results = [];
+        }
+        finally
+        {
+            isSearching = false;
+        }
+    }
+
+    private static string GetInitials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 1
+            ? $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
+            : (name.Length > 0 ? name[..1].ToUpperInvariant() : "S");
+    }
+}
