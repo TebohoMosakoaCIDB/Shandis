@@ -33,7 +33,7 @@ public sealed class ShandisAuthService
         CancellationToken cancellationToken = default)
     {
         using var response = await apiClient.HttpClient.PostAsJsonAsync(
-            "api/auth/login?useCookies=false",
+            "api/auth/login?useCookies=false&useSessionCookies=false",
             new { email, password },
             cancellationToken);
 
