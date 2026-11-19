@@ -13,6 +13,8 @@ public sealed class GetMemoryResult
 
     public Guid OwnerId { get; init; }
 
+    public ParticipantRole? MyRole { get; init; }
+
     public Guid? CategoryId { get; init; }
 
     public string? CategoryName { get; init; }
