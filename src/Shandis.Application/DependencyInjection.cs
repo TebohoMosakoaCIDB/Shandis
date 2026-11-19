@@ -1,7 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Shandis.Application.Features.Invitations;
 using Shandis.Application.Features.Memories;
-using Shandis.Application.Features.Moments;\nusing Shandis.Application.Features.Notifications;
+using Shandis.Application.Features.Moments;
+using Shandis.Application.Features.Notifications;
 
 namespace Shandis.Application
 {
@@ -12,7 +13,8 @@ namespace Shandis.Application
         {
             services.AddScoped<IMemoryService, MemoryService>();
             services.AddScoped<IInvitationService, InvitationService>();
-            services.AddScoped<IMomentService, MomentService>();\n            services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IMomentService, MomentService>();
+            services.AddScoped<INotificationService, NotificationService>();
 
             return services;
         }
