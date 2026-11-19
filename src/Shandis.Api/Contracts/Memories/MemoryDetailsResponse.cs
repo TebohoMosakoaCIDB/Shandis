@@ -13,6 +13,8 @@ public class MemoryDetailsResponse
 
     public Guid OwnerId { get; set; }
 
+    public ParticipantRole? MyRole { get; set; }
+
     public Guid? CategoryId { get; set; }
 
     public string? CategoryName { get; set; }
