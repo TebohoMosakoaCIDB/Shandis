@@ -121,16 +121,6 @@ public class InvitationService : IInvitationService
             throw new InvalidOperationException(
                 "You cannot invite yourself to your own Memory.");
 
-        var hasPendingInvitation =
-            await _invitationRepository.HasPendingInvitationAsync(
-                command.MemoryId,
-                email,
-                cancellationToken);
-
-        if (hasPendingInvitation)
-            throw new InvalidOperationException(
-                "A pending invitation already exists for this email address.");
-
         var memoryTitle = await _invitationRepository.GetMemoryTitleAsync(command.MemoryId, cancellationToken);
 
         if (memoryTitle is null)
@@ -149,8 +139,9 @@ public class InvitationService : IInvitationService
             expiresAtUtc: expiresAtUtc,
             invitedUserId: existingUserId);
 
-        await _invitationRepository.AddAsync(
+        await _invitationRepository.UpsertInvitationAsync(
             invitation,
+            existingUserId,
             cancellationToken);
 
         // Registered members receive an in-app notification. Email is retained
