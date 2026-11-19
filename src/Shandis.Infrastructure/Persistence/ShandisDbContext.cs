@@ -43,7 +43,7 @@ public class ShandisDbContext
 
     public DbSet<Conversation> Conversations => Set<Conversation>();
 
-    public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
+    public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();\n\n    public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
 
 
     protected override void OnModelCreating(ModelBuilder builder)
