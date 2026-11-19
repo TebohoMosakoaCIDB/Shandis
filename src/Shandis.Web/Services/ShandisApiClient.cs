@@ -40,6 +40,12 @@ public sealed class ShandisApiClient(HttpClient httpClient)
             $"[Shandis API] Access token attached: {!string.IsNullOrWhiteSpace(authorization?.Parameter)}");
     }
 
+    public async Task<UserProfileItem> GetMyProfileAsync(
+        CancellationToken cancellationToken = default)
+        => await GetRequiredAsync<UserProfileItem>(
+            "api/profile/me",
+            cancellationToken);
+
     public async Task<CreatedMemoryResponse> CreateMemoryAsync(
         CreateMemoryRequest request,
         CancellationToken cancellationToken = default)
