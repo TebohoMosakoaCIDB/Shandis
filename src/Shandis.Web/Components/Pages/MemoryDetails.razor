@@ -68,13 +68,21 @@
                         @(isPublishing ? "Publishing…" : "Publish Memory")
                     </button>
                 }
-                @if (memory.Status != 1 || canManageInvitations)
+                @if (CanAddMoment)
                 {
                     <a class="shandis-btn shandis-btn-primary" href="@($"/memories/{MemoryId}/moments/create")">＋ Add a moment</a>
                 }
-                else
+                else if (memory.Status == 1)
                 {
                     <span class="publish-waiting">Waiting for the owner to publish this Memory.</span>
+                }
+                else if (memory.MyRole == 3)
+                {
+                    <span class="publish-waiting">You have Viewer access. You can view this Memory but cannot add Moments.</span>
+                }
+                else
+                {
+                    <span class="publish-waiting">Only invited Contributors can add Moments to this Memory.</span>
                 }
             </div>
         </section>
@@ -513,6 +521,31 @@
     private string? invitationMessage;
     private bool invitationIsError;
     private readonly HashSet<Guid> busyInvitationIds = [];
+
+    private bool CanAddMoment
+    {
+        get
+        {
+            if (memory is null || memory.Status == 4)
+                return false;
+
+            // The owner can add Moments to Draft, Published and Completed Memories.
+            if (memory.MyRole == 1 || memory.OwnerId == AuthService.CurrentUserId)
+                return true;
+
+            // A Viewer is always read-only, regardless of the public contribution policy.
+            if (memory.MyRole == 3 || memory.Status == 1)
+                return false;
+
+            // Private Memories and InvitationOnly public Memories require an active Contributor.
+            if (memory.Visibility == 2 || memory.ContributionPolicy == 3)
+                return memory.MyRole == 2;
+
+            // Public Open and ApprovalRequired Memories accept any signed-in non-Viewer.
+            return memory.Visibility == 1 &&
+                   (memory.ContributionPolicy == 1 || memory.ContributionPolicy == 2);
+        }
+    }
 
     private List<GalleryItem> FilteredGalleryItems => galleryFilter switch
     {
