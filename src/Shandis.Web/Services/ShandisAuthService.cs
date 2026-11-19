@@ -4,10 +4,10 @@ using Microsoft.JSInterop;
 
 namespace Shandis.Web.Services;
 
-public sealed class ShandisAuthService(
-    ShandisApiClient apiClient,
-    IJSRuntime js)
+public sealed class ShandisAuthService
 {
+    private readonly ShandisApiClient apiClient;
+    private readonly IJSRuntime js;
     private const string AccessTokenKey = "shandis.access-token";
     private const string RefreshTokenKey = "shandis.refresh-token";
     private const string AccessTokenExpiresAtKey = "shandis.access-token-expires-at";
@@ -21,8 +21,9 @@ public sealed class ShandisAuthService(
 
     // Register the token check once. ShandisApiClient invokes it before protected API calls.
     public ShandisAuthService(ShandisApiClient apiClient, IJSRuntime js)
-        : this(apiClient, js)
     {
+        this.apiClient = apiClient;
+        this.js = js;
         apiClient.SetBeforeRequest(EnsureValidAccessTokenAsync);
     }
 
