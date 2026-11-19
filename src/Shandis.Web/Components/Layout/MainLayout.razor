@@ -2,6 +2,7 @@
 @inject IJSRuntime JS
 @inject Shandis.Web.Services.ShandisAuthService AuthService
 @inject NavigationManager Navigation
+@inject Shandis.Web.Services.ShandisApiClient ApiClient
 
 <div class="shandis-shell">
     <aside class="shandis-sidebar">
@@ -38,9 +39,12 @@
             </button>
             @if (AuthService.IsAuthenticated)
             {
-                <button class="profile-chip" type="button" @onclick="LogoutAsync">
-                    <span class="profile-avatar">S</span>
-                    <span class="profile-name">Sign out</span>
+                <button class="profile-chip" type="button" @onclick="LogoutAsync" title="Signed in as @CurrentUserLabel — sign out">
+                    <span class="profile-avatar">@CurrentUserInitials</span>
+                    <span class="profile-identity">
+                        <span class="profile-name">@CurrentUserLabel</span>
+                        <span class="profile-presence"><span class="online-indicator"></span>Online</span>
+                    </span>
                     <span class="profile-chevron">↗</span>
                 </button>
             }
@@ -83,9 +87,42 @@
                 return;
             }
 
+            try
+            {
+                currentUser = await ApiClient.GetMyProfileAsync();
+            }
+            catch
+            {
+                // Keep the authenticated shell usable if the profile endpoint is temporarily unavailable.
+            }
+
             StateHasChanged();
         }
     }
+
+    private string CurrentUserLabel =>
+        !string.IsNullOrWhiteSpace(currentUser?.DisplayName)
+            ? currentUser.DisplayName
+            : $"{currentUser?.FirstName} {currentUser?.LastName}".Trim() is { Length: > 0 } fullName
+                ? fullName
+                : currentUser?.Email ?? "Signed in";
+
+    private string CurrentUserInitials
+    {
+        get
+        {
+            var name = CurrentUserLabel;
+            var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0)
+                return "U";
+
+            return parts.Length == 1
+                ? parts[0][..1].ToUpperInvariant()
+                : $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
+        }
+    }
+
+    private Shandis.Web.Models.UserProfileItem? currentUser;
 
     private async Task ToggleThemeAsync()
     {
