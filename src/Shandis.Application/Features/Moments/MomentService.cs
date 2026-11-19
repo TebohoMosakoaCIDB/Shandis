@@ -1,5 +1,6 @@
 ﻿using Shandis.Application.Abstractions.Persistence;
 using Shandis.Application.Abstractions.Storage;
+using Shandis.Application.Features.Notifications;
 using Shandis.Application.Features.Moments.Commands;
 using Shandis.Application.Features.Moments.Results;
 using Shandis.Domain.Entities;
@@ -14,13 +15,16 @@ public class MomentService : IMomentService
 
     private readonly IMomentRepository _momentRepository;
     private readonly IMediaStorageService _mediaStorageService;
+    private readonly INotificationService _notificationService;
 
     public MomentService(
         IMomentRepository momentRepository,
-        IMediaStorageService mediaStorageService)
+        IMediaStorageService mediaStorageService,
+        INotificationService notificationService)
     {
         _momentRepository = momentRepository;
         _mediaStorageService = mediaStorageService;
+        _notificationService = notificationService;
     }
 
     public async Task<CreateMomentResult> CreateAsync(
@@ -115,6 +119,20 @@ public class MomentService : IMomentService
                 participantToSave,
                 isNewParticipant,
                 cancellationToken);
+
+            if (requiresApproval && memory.OwnerId != command.CreatedByUserId)
+            {
+                await _notificationService.CreateAsync(
+                    memory.OwnerId,
+                    command.CreatedByUserId,
+                    NotificationType.MomentPendingApproval,
+                    "Moment awaiting approval",
+                    $"A new contribution is waiting for approval in \"{memory.Title}\".",
+                    $"/memories/{memory.Id}",
+                    memory.Id,
+                    moment.Id,
+                    cancellationToken);
+            }
         }
         catch
         {
@@ -636,6 +654,17 @@ public class MomentService : IMomentService
             isNewParticipant,
             cancellationToken);
 
+        await _notificationService.CreateAsync(
+            moment.CreatedByUserId,
+            userId,
+            NotificationType.MomentApproved,
+            "Moment approved",
+            $"Your contribution to \"{moment.Memory.Title}\" has been approved.",
+            $"/memories/{moment.MemoryId}",
+            moment.MemoryId,
+            moment.Id,
+            cancellationToken);
+
         return await MapResultAsync(moment, cancellationToken, userId);
     }
 
@@ -659,6 +688,17 @@ public class MomentService : IMomentService
             moment,
             null,
             false,
+            cancellationToken);
+
+        await _notificationService.CreateAsync(
+            moment.CreatedByUserId,
+            userId,
+            NotificationType.MomentRejected,
+            "Moment not approved",
+            $"Your contribution to \"{moment.Memory.Title}\" was not approved.",
+            $"/memories/{moment.MemoryId}",
+            moment.MemoryId,
+            moment.Id,
             cancellationToken);
 
         return await MapResultAsync(moment, cancellationToken, userId);
@@ -766,11 +806,32 @@ public class MomentService : IMomentService
             context.Participant,
             userId);
 
+        var previousLike = await _momentRepository.GetLikeSummaryAsync(
+            momentId,
+            userId,
+            cancellationToken);
+
         await _momentRepository.SetLikeAsync(
             momentId,
             userId,
             isLiked,
             cancellationToken);
+
+        if (isLiked &&
+            !previousLike.IsLikedByCurrentUser &&
+            moment.CreatedByUserId != userId)
+        {
+            await _notificationService.CreateAsync(
+                moment.CreatedByUserId,
+                userId,
+                NotificationType.MomentLiked,
+                "New like",
+                $"Someone liked your Moment in \"{moment.Memory.Title}\".",
+                $"/memories/{moment.MemoryId}",
+                moment.MemoryId,
+                moment.Id,
+                cancellationToken);
+        }
 
         return await _momentRepository.GetLikeSummaryAsync(
             momentId,
@@ -797,6 +858,20 @@ public class MomentService : IMomentService
 
         var comment = new MomentComment(moment.Id, userId, content, parentCommentId);
         await _momentRepository.AddCommentAsync(comment, cancellationToken);
+
+        if (moment.CreatedByUserId != userId)
+        {
+            await _notificationService.CreateAsync(
+                moment.CreatedByUserId,
+                userId,
+                NotificationType.MomentCommented,
+                "New comment",
+                $"Someone commented on your Moment in \"{moment.Memory.Title}\".",
+                $"/memories/{moment.MemoryId}",
+                moment.MemoryId,
+                moment.Id,
+                cancellationToken);
+        }
 
         return await _momentRepository.GetCommentResultAsync(comment.Id, userId, cancellationToken)
             ?? throw new InvalidOperationException("The comment was saved but could not be retrieved.");
