@@ -88,3 +88,15 @@ public enum ReactionType
     Laugh = 3,
     Wow = 4
 }
+
+public enum NotificationType
+{
+    MemoryInvitationReceived = 1,
+    InvitationAccepted = 2,
+    InvitationDeclined = 3,
+    MomentPendingApproval = 4,
+    MomentApproved = 5,
+    MomentRejected = 6,
+    MomentLiked = 7,
+    MomentCommented = 8
+}
