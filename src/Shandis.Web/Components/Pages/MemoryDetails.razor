@@ -153,7 +153,7 @@
                 {
                     <p class="invitation-feedback is-error">@invitationLoadError</p>
                 }
-                <p class="invitation-note">Enter a registered member's @@username or an email address for someone who has not joined Shandis. Invitations expire after 7 days.</p>
+                <p class="invitation-note">Enter a registered member's @@username or an email address for someone who has not joined Shandis. Email delivery for new members still needs to be configured. Invitations expire after 7 days.</p>
             </section>
         }
 
@@ -825,7 +825,9 @@
             await ApiClient.CreateInvitationAsync(MemoryId, inviteIdentifier.Trim(), inviteRole);
             inviteIdentifier = string.Empty;
             memoryInvitations = await ApiClient.GetMemoryInvitationsAsync(MemoryId);
-            invitationMessage = "Invitation created. Shandis members receive an in-app notification; email invitations can be used for people who have not joined yet.";
+            invitationMessage = inviteIdentifier.StartsWith("@", StringComparison.Ordinal)
+                ? "Invitation created. This Shandis member will receive an in-app notification."
+                : "Invitation created. Registered members receive an in-app notification; delivery to new members requires the email service to be configured.";
         }
         catch (Exception ex)
         {
