@@ -120,24 +120,25 @@ public class MomentService : IMomentService
                 isNewParticipant,
                 cancellationToken);
 
-            if (requiresApproval && memory.OwnerId != command.CreatedByUserId)
-            {
-                await _notificationService.CreateAsync(
-                    memory.OwnerId,
-                    command.CreatedByUserId,
-                    NotificationType.MomentPendingApproval,
-                    "Moment awaiting approval",
-                    $"A new contribution is waiting for approval in \"{memory.Title}\".",
-                    $"/memories/{memory.Id}",
-                    memory.Id,
-                    moment.Id,
-                    cancellationToken);
-            }
         }
         catch
         {
             await CleanupUploadedFilesAsync(uploadedObjectPaths);
             throw;
+        }
+
+        if (requiresApproval && memory.OwnerId != command.CreatedByUserId)
+        {
+            await _notificationService.CreateAsync(
+                memory.OwnerId,
+                command.CreatedByUserId,
+                NotificationType.MomentPendingApproval,
+                "Moment awaiting approval",
+                $"A new contribution is waiting for approval in \"{memory.Title}\".",
+                $"/memories/{memory.Id}",
+                memory.Id,
+                moment.Id,
+                cancellationToken);
         }
 
         return await MapResultAsync(moment, cancellationToken);
