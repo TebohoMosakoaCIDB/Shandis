@@ -87,28 +87,26 @@ public class MemoryService : IMemoryService
         Guid requestingUserId,
         CancellationToken cancellationToken = default)
     {
-        var memoryTask = _memoryRepository.GetByIdAsync(
+        var memory = await _memoryRepository.GetByIdAsync(
             memoryId,
             cancellationToken);
-
-        var participantTask = _memoryRepository.IsActiveParticipantAsync(
-            memoryId,
-            requestingUserId,
-            cancellationToken);
-
-        await Task.WhenAll(memoryTask, participantTask);
-
-        var memory = await memoryTask;
-        var isActiveParticipant = await participantTask;
 
         if (memory is null)
             return null;
+
+        var isOwner = memory.OwnerId == requestingUserId;
+        var participant = memory.Participants.FirstOrDefault(x =>
+            x.UserId == requestingUserId &&
+            x.Status == ParticipantStatus.Active &&
+            x.DeletedAtUtc == null);
+
+        var isActiveParticipant = participant is not null;
 
         var isPubliclyVisible =
             memory.Visibility == MemoryVisibility.Public &&
             memory.Status is MemoryStatus.Published or MemoryStatus.Completed;
 
-        if (!isActiveParticipant && !isPubliclyVisible)
+        if (!isOwner && !isActiveParticipant && !isPubliclyVisible)
             return null;
 
         return new GetMemoryResult
@@ -117,6 +115,7 @@ public class MemoryService : IMemoryService
             Title = memory.Title,
             Description = memory.Description,
             OwnerId = memory.OwnerId,
+            MyRole = isOwner ? ParticipantRole.Owner : participant?.Role,
             CategoryId = memory.CategoryId,
             CategoryName = memory.Category?.Name,
             PlaceId = memory.PlaceId,
