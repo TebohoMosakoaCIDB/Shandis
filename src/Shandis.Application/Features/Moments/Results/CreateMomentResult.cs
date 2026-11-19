@@ -29,6 +29,8 @@ public class CreateMomentResult
 
     public int LikeCount { get; set; }
 
+    public int CommentCount { get; set; }
+
     public bool IsLikedByCurrentUser { get; set; }
 
     public List<MomentMediaResult> Media { get; set; } = [];
