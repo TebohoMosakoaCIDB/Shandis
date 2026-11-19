@@ -11,6 +11,7 @@ public sealed class ShandisAuthService
     private const string AccessTokenKey = "shandis.access-token";
     private const string RefreshTokenKey = "shandis.refresh-token";
     private const string AccessTokenExpiresAtKey = "shandis.access-token-expires-at";
+    private const string UserEmailKey = "shandis.user-email";
 
     private readonly SemaphoreSlim refreshLock = new(1, 1);
     private bool isInitialized;
@@ -18,6 +19,7 @@ public sealed class ShandisAuthService
     private DateTimeOffset? accessTokenExpiresAt;
 
     public bool IsAuthenticated { get; private set; }
+    public string? CurrentUserEmail { get; private set; }
 
     // Register the token check once. ShandisApiClient invokes it before protected API calls.
     public ShandisAuthService(ShandisApiClient apiClient, IJSRuntime js)
@@ -59,6 +61,8 @@ public sealed class ShandisAuthService
         }
 
         await StoreTokensAsync(tokens.AccessToken, tokens.RefreshToken, tokens.ExpiresIn);
+        CurrentUserEmail = email.Trim();
+        await js.InvokeVoidAsync("shandisAuth.set", UserEmailKey, CurrentUserEmail);
         isInitialized = true;
         return (true, null);
     }
@@ -85,6 +89,7 @@ public sealed class ShandisAuthService
             return;
 
         var accessToken = await js.InvokeAsync<string?>("shandisAuth.get", AccessTokenKey);
+        CurrentUserEmail = await js.InvokeAsync<string?>("shandisAuth.get", UserEmailKey);
         refreshToken = await js.InvokeAsync<string?>("shandisAuth.get", RefreshTokenKey);
 
         var expiresAt = await js.InvokeAsync<string?>("shandisAuth.get", AccessTokenExpiresAtKey);
@@ -106,6 +111,8 @@ public sealed class ShandisAuthService
         apiClient.SetAccessToken(null);
         refreshToken = null;
         accessTokenExpiresAt = null;
+        CurrentUserEmail = null;
+        await js.InvokeVoidAsync("shandisAuth.remove", UserEmailKey);
         IsAuthenticated = false;
         isInitialized = true;
     }
