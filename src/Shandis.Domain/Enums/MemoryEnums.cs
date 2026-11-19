@@ -98,5 +98,6 @@ public enum NotificationType
     MomentApproved = 5,
     MomentRejected = 6,
     MomentLiked = 7,
-    MomentCommented = 8
+    MomentCommented = 8,
+    MomentPublished = 9
 }
