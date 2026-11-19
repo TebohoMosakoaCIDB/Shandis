@@ -49,6 +49,23 @@ public class MomentRepository : IMomentRepository
         };
     }
 
+    public async Task<IReadOnlyList<Guid>> GetActiveParticipantUserIdsAsync(
+        Guid memoryId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.MemoryParticipants
+            .AsNoTracking()
+            .Where(x =>
+                x.MemoryId == memoryId &&
+                x.Status == ParticipantStatus.Active)
+            .Select(x => x.UserId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(
         MemoryMoment moment,
         MemoryParticipant? participant,
