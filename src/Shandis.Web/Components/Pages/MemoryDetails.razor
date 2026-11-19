@@ -90,7 +90,7 @@
                         </select>
                     </label>
                     <button class="shandis-btn shandis-btn-primary" type="submit" disabled="@isSendingInvitation">
-                        @(isSendingInvitation ? "Sending…" : "＋ Send invite")
+                        @(isSendingInvitation ? "Creating…" : "＋ Create invitation")
                     </button>
                 </form>
 
@@ -122,7 +122,7 @@
                         }
                     </div>
                 }
-                <p class="invitation-note">Invitations expire after 7 days. Invitees must sign in with the invited email address to accept.</p>
+                <p class="invitation-note">Invitations expire after 7 days. Invitees can accept from Shared with Me after signing in with this email address. Email notifications are not connected yet.</p>
             </section>
         }
 
