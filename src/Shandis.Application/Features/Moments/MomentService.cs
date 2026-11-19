@@ -141,6 +141,20 @@ public class MomentService : IMomentService
                 cancellationToken);
         }
 
+        else if (moment.Status == MomentStatus.Published)
+        {
+            await NotifyMemoryParticipantsAsync(
+                memory.Id,
+                memory.OwnerId,
+                command.CreatedByUserId,
+                command.CreatedByUserId,
+                NotificationType.MomentPublished,
+                "New Moment",
+                $"A new Moment was shared in \"{memory.Title}\".",
+                moment.Id,
+                cancellationToken);
+        }
+
         return await MapResultAsync(moment, cancellationToken);
     }
 
@@ -679,6 +693,17 @@ public class MomentService : IMomentService
             moment.Id,
             cancellationToken);
 
+        await NotifyMemoryParticipantsAsync(
+            moment.MemoryId,
+            moment.Memory.OwnerId,
+            userId,
+            moment.CreatedByUserId,
+            NotificationType.MomentPublished,
+            "New Moment",
+            $"A new Moment was shared in \"{moment.Memory.Title}\".",
+            moment.Id,
+            cancellationToken);
+
         return await MapResultAsync(moment, cancellationToken, userId);
     }
 
@@ -873,22 +898,58 @@ public class MomentService : IMomentService
         var comment = new MomentComment(moment.Id, userId, content, parentCommentId);
         await _momentRepository.AddCommentAsync(comment, cancellationToken);
 
-        if (moment.CreatedByUserId != userId)
-        {
-            await _notificationService.CreateAsync(
-                moment.CreatedByUserId,
-                userId,
-                NotificationType.MomentCommented,
-                "New comment",
-                $"Someone commented on your Moment in \"{moment.Memory.Title}\".",
-                $"/memories/{moment.MemoryId}",
-                moment.MemoryId,
-                moment.Id,
-                cancellationToken);
-        }
+        await NotifyMemoryParticipantsAsync(
+            moment.MemoryId,
+            moment.Memory.OwnerId,
+            userId,
+            null,
+            NotificationType.MomentCommented,
+            "New comment",
+            $"A new comment was added to a Moment in \"{moment.Memory.Title}\".",
+            moment.Id,
+            cancellationToken);
 
         return await _momentRepository.GetCommentResultAsync(comment.Id, userId, cancellationToken)
             ?? throw new InvalidOperationException("The comment was saved but could not be retrieved.");
+    }
+
+    private async Task NotifyMemoryParticipantsAsync(
+        Guid memoryId,
+        Guid memoryOwnerId,
+        Guid actorUserId,
+        Guid? additionallyExcludedUserId,
+        NotificationType notificationType,
+        string title,
+        string message,
+        Guid momentId,
+        CancellationToken cancellationToken)
+    {
+        var participantIds =
+            await _momentRepository.GetActiveParticipantUserIdsAsync(
+                memoryId,
+                cancellationToken);
+
+        var recipientIds = participantIds
+            .Append(memoryOwnerId)
+            .Distinct()
+            .Where(recipientId =>
+                recipientId != actorUserId &&
+                (!additionallyExcludedUserId.HasValue ||
+                 recipientId != additionallyExcludedUserId.Value));
+
+        foreach (var recipientId in recipientIds)
+        {
+            await _notificationService.CreateAsync(
+                recipientId,
+                actorUserId,
+                notificationType,
+                title,
+                message,
+                $"/memories/{memoryId}",
+                memoryId,
+                momentId,
+                cancellationToken);
+        }
     }
 
     public async Task<GetMomentCommentsResult> GetCommentsAsync(
