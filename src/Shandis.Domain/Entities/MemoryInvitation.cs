@@ -78,6 +78,37 @@ public class MemoryInvitation : Entity
         MarkAsUpdated();
     }
 
+    public void Reissue(
+        Guid? invitedUserId,
+        InvitationRole assignedRole,
+        string tokenHash,
+        DateTime expiresAtUtc)
+    {
+        if (invitedUserId == Guid.Empty)
+            throw new ArgumentException("Invited user ID cannot be an empty GUID.", nameof(invitedUserId));
+        if (string.IsNullOrWhiteSpace(tokenHash))
+            throw new ArgumentException("Invitation token hash is required.", nameof(tokenHash));
+        if (expiresAtUtc <= DateTime.UtcNow)
+            throw new ArgumentException("Invitation expiry must be in the future.", nameof(expiresAtUtc));
+
+        InvitedUserId = invitedUserId;
+        AssignedRole = assignedRole;
+        TokenHash = tokenHash;
+        ExpiresAtUtc = expiresAtUtc;
+        Status = InvitationStatus.Pending;
+        AcceptedAtUtc = null;
+        MarkAsUpdated();
+    }
+
+    public void Supersede()
+    {
+        if (Status == InvitationStatus.Revoked)
+            return;
+
+        Status = InvitationStatus.Revoked;
+        MarkAsUpdated();
+    }
+
     public void Decline()
     {
         EnsurePending();
