@@ -132,6 +132,30 @@ public sealed class ShandisApiClient(HttpClient httpClient)
             ?? throw new InvalidOperationException("The Shandis API returned an empty Moment response.");
     }
 
+    public async Task ApproveMomentAsync(
+        Guid momentId,
+        CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.PostAsync(
+            $"api/moments/{momentId}/approve",
+            content: null,
+            cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public async Task RejectMomentAsync(
+        Guid momentId,
+        CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.PostAsync(
+            $"api/moments/{momentId}/reject",
+            content: null,
+            cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
     public async Task<MomentLikeResult> LikeMomentAsync(
         Guid momentId, CancellationToken cancellationToken = default)
     {
