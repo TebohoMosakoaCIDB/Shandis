@@ -37,7 +37,7 @@ public class InvitationsController : ControllerBase
                 {
                     MemoryId = memoryId,
                     InvitedByUserId = userId.Value,
-                    InvitedEmail = request.InvitedEmail,
+                    Invitee = request.Invitee,
                     AssignedRole = request.AssignedRole
                 },
                 cancellationToken);
