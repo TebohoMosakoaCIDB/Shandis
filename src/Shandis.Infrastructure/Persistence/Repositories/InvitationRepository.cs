@@ -44,6 +44,21 @@ public class InvitationRepository : IInvitationRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public async Task<Guid?> FindUserIdByUserNameAsync(
+        string userName,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var normalizedUserName = userName.Trim().TrimStart('@').ToUpperInvariant();
+
+        return await dbContext.Users
+            .Where(x => x.NormalizedUserName == normalizedUserName)
+            .Select(x => (Guid?)x.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<bool> HasPendingInvitationAsync(
         Guid memoryId,
         string email,
