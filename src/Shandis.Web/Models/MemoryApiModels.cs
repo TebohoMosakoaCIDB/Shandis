@@ -74,6 +74,7 @@ public sealed class MomentItem
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? PublishedAtUtc { get; set; }
     public int LikeCount { get; set; }
+    public int CommentCount { get; set; }
     public bool IsLikedByCurrentUser { get; set; }
     public List<MomentMediaItem> Media { get; set; } = [];
 }
