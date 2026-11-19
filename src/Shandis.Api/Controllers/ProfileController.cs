@@ -46,6 +46,10 @@ public class ProfileController : ControllerBase
             return Ok(Array.Empty<MemberSearchResponse>());
 
         var currentUser = await _userManager.GetUserAsync(User);
+
+        if (currentUser is null)
+            return Unauthorized();
+
         var normalizedTerm = term.TrimStart('@').ToLowerInvariant();
 
         if (normalizedTerm.Length < 2)
@@ -54,7 +58,7 @@ public class ProfileController : ControllerBase
         var members = await _userManager.Users
             .AsNoTracking()
             .Where(user =>
-                user.Id != currentUser!.Id &&
+                user.Id != currentUser.Id &&
                 user.IsActive &&
                 ((user.UserName ?? string.Empty).ToLower().Contains(normalizedTerm) ||
                  (user.DisplayName ?? string.Empty).ToLower().Contains(normalizedTerm)))
