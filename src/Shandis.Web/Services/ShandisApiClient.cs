@@ -23,8 +23,22 @@ public sealed class ShandisApiClient(HttpClient httpClient)
     public void SetBeforeRequest(Func<CancellationToken, Task> callback)
         => beforeRequest = callback;
 
-    private Task PrepareRequestAsync(CancellationToken cancellationToken)
-        => beforeRequest?.Invoke(cancellationToken) ?? Task.CompletedTask;
+    private async Task PrepareRequestAsync(CancellationToken cancellationToken)
+    {
+        if (beforeRequest is not null)
+            await beforeRequest(cancellationToken);
+
+        var authorization = HttpClient.DefaultRequestHeaders.Authorization;
+
+        System.Diagnostics.Debug.WriteLine(
+            $"[Shandis API] Base URL: {HttpClient.BaseAddress}");
+
+        System.Diagnostics.Debug.WriteLine(
+            $"[Shandis API] Authorization scheme: {authorization?.Scheme ?? "MISSING"}");
+
+        System.Diagnostics.Debug.WriteLine(
+            $"[Shandis API] Access token attached: {!string.IsNullOrWhiteSpace(authorization?.Parameter)}");
+    }
 
     public async Task<CreatedMemoryResponse> CreateMemoryAsync(
         CreateMemoryRequest request,

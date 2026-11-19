@@ -37,8 +37,15 @@ public sealed class ShandisAuthService
             new { email, password },
             cancellationToken);
 
+        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+
         if (!response.IsSuccessStatusCode)
-            return (false, await ReadErrorAsync(response));
+        {
+            var error = $"Login failed. Status: {(int)response.StatusCode} " +
+                        $"{response.StatusCode}. Response: {responseBody}";
+
+            return (false, error);
+        }
 
         using var document = await JsonDocument.ParseAsync(
             await response.Content.ReadAsStreamAsync(cancellationToken),
@@ -111,7 +118,7 @@ public sealed class ShandisAuthService
             throw new UnauthorizedAccessException("You are not signed in. Please sign in again.");
 
         // Refresh shortly before expiry to avoid a token expiring during an API request.
-        if (accessTokenExpiresAt is null ||
+        if (accessTokenExpiresAt is not null &&
             accessTokenExpiresAt.Value > DateTimeOffset.UtcNow.AddMinutes(2))
         {
             return;
