@@ -53,6 +53,10 @@
             </div>
         </section>
     }
+    else if (!isLoading && !string.IsNullOrWhiteSpace(invitationMessage))
+    {
+        <p class="inbox-feedback @(invitationIsError ? "is-error" : "is-success")">@invitationMessage</p>
+    }
     else if (!isLoading && !string.IsNullOrWhiteSpace(invitationError))
     {
         <p class="inbox-load-error">@invitationError</p>
