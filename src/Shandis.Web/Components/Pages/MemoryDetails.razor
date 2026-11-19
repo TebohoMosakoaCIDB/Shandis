@@ -61,9 +61,28 @@
                 <div class="memory-profile-stat"><strong>@galleryItems.Count</strong><span>Media</span></div>
                 <div class="memory-profile-stat"><strong>@momentsTotal</strong><span>Moments</span></div>
                 <span class="memory-profile-spacer"></span>
-                <a class="shandis-btn shandis-btn-primary" href="@($"/memories/{MemoryId}/moments/create")">＋ Add a moment</a>
+                <span class="memory-status status-@memory.Status">@MemoryStatusText(memory.Status)</span>
+                @if (canManageInvitations && memory.Status == 1)
+                {
+                    <button class="shandis-btn shandis-btn-primary" @onclick="PublishMemoryAsync" disabled="@isPublishing">
+                        @(isPublishing ? "Publishing…" : "Publish Memory")
+                    </button>
+                }
+                @if (memory.Status != 1 || canManageInvitations)
+                {
+                    <a class="shandis-btn shandis-btn-primary" href="@($"/memories/{MemoryId}/moments/create")">＋ Add a moment</a>
+                }
+                else
+                {
+                    <span class="publish-waiting">Waiting for the owner to publish this Memory.</span>
+                }
             </div>
         </section>
+
+        @if (!string.IsNullOrWhiteSpace(publishMessage))
+        {
+            <p class="invitation-feedback @(publishIsError ? "is-error" : "is-success")">@publishMessage</p>
+        }
 
         @if (canManageInvitations || !string.IsNullOrWhiteSpace(invitationLoadError))
         {
@@ -389,6 +408,9 @@
     .invitation-revoke:hover{border-color:#C34D55;color:#C34D55}.invitation-revoke:disabled{opacity:.5}
     .invitation-note{margin:12px 0 0;color:var(--shandis-text-muted);font-size:9px}
     .memory-profile-stat strong{color:var(--shandis-text);font-size:12px}.memory-profile-spacer{flex:1}
+    .memory-status{padding:6px 10px;border-radius:999px;background:var(--shandis-surface-muted);color:var(--shandis-text-muted);font-size:9px;font-weight:850}
+    .memory-status.status-2{background:var(--shandis-primary-soft);color:var(--shandis-primary)}
+    .publish-waiting{color:var(--shandis-text-muted);font-size:9px;font-weight:700}
     .gallery-section,.moments-section{margin-top:35px}
     .section-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:15px;margin-bottom:17px}
     .eyebrow{margin:0 0 5px;color:var(--shandis-primary);font-size:8px;font-weight:900;letter-spacing:.15em}
@@ -480,6 +502,9 @@
     private int momentsTotal;
     private int momentsTotalPages;
     private bool canManageInvitations;
+    private bool isPublishing;
+    private string? publishMessage;
+    private bool publishIsError;
     private string? invitationLoadError;
     private List<Shandis.Web.Models.InvitationItem> memoryInvitations = [];
     private string inviteEmail = string.Empty;
@@ -570,6 +595,51 @@
         {
             isLoading = false;
             StateHasChanged();
+        }
+    }
+
+    private static string MemoryStatusText(int status) => status switch
+    {
+        1 => "Draft",
+        2 => "Published",
+        3 => "Completed",
+        4 => "Archived",
+        _ => "Unknown"
+    };
+
+    private async Task PublishMemoryAsync()
+    {
+        if (!canManageInvitations || memory is null || memory.Status != 1 || isPublishing)
+            return;
+
+        isPublishing = true;
+        publishMessage = null;
+        publishIsError = false;
+
+        try
+        {
+            await ApiClient.PublishMemoryAsync(MemoryId);
+            memory = await ApiClient.GetMemoryAsync(MemoryId);
+
+            if (memory is null)
+                throw new InvalidOperationException("The Memory could not be reloaded after publishing.");
+
+            publishMessage = "Your Memory is now published. Eligible contributors can start adding Moments.";
+            var result = await ApiClient.GetMomentsAsync(MemoryId, 1, PageSize);
+            moments = result.Moments;
+            momentsPage = result.Page;
+            momentsTotal = result.TotalCount;
+            momentsTotalPages = result.TotalPages;
+            RebuildGallery();
+        }
+        catch (Exception ex)
+        {
+            publishIsError = true;
+            publishMessage = ex.Message;
+        }
+        finally
+        {
+            isPublishing = false;
         }
     }
 
