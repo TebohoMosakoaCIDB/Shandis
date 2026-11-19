@@ -93,6 +93,42 @@ public class MemoriesController : ControllerBase
         }
     }
 
+    [HttpPost("{id:guid}/publish")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Publish(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdValue, out var userId))
+            return Unauthorized();
+
+        try
+        {
+            var published = await _memoryService.PublishAsync(
+                id,
+                userId,
+                cancellationToken);
+
+            if (!published)
+                return NotFound();
+
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(MemoryDetailsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
