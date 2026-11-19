@@ -2,7 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Shandis.Application.Abstractions.Email;
 using Shandis.Application.Abstractions.Persistence;
-using Shandis.Application.Abstractions.Storage;\nusing Shandis.Application.Abstractions.Persistence;
+using Shandis.Application.Abstractions.Storage;
 using Shandis.Infrastructure.Options;
 using Shandis.Infrastructure.Persistence.Repositories;
 using Shandis.Infrastructure.Services;
@@ -19,7 +19,8 @@ namespace Shandis.Infrastructure
             services.AddScoped<IMemoryRepository, MemoryRepository>();
             services.AddScoped<IInvitationRepository, InvitationRepository>();
             services.AddScoped<IEmailService, LoggingEmailService>();
-            services.AddScoped<IMomentRepository, MomentRepository>();\n            services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<IMomentRepository, MomentRepository>();
+            services.AddScoped<INotificationRepository, NotificationRepository>();
 
             services.AddOptions<SupabaseStorageOptions>()
                 .Bind(configuration.GetSection(SupabaseStorageOptions.SectionName))
