@@ -601,6 +601,33 @@ public class MomentService : IMomentService
             throw new InvalidOperationException(
                 "Only pending Moments can be approved.");
 
+        // A public ApprovalRequired contribution does not become a Memory
+        // participant until the owner approves it. Create or reactivate the
+        // Contributor participant at the same time as publishing the Moment.
+        if (participant is null)
+        {
+            participant = new MemoryParticipant(
+                moment.MemoryId,
+                moment.CreatedByUserId,
+                ParticipantRole.Contributor,
+                ParticipantJoinSource.Contribution);
+
+            isNewParticipant = true;
+        }
+        else if (participant.Status == ParticipantStatus.Removed)
+        {
+            participant.Reactivate(
+                ParticipantRole.Contributor,
+                ParticipantJoinSource.Contribution);
+
+            isNewParticipant = false;
+        }
+        else if (participant.Role == ParticipantRole.Viewer)
+        {
+            throw new UnauthorizedAccessException(
+                "A Viewer cannot have a Moment approved as a contribution.");
+        }
+
         moment.Approve();
 
         await _momentRepository.SaveModerationAsync(
