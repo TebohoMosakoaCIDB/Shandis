@@ -406,9 +406,18 @@
                     <p class="lightbox-caption">@selectedGalleryItem.Moment.Content</p>
                 }
                 <div class="lightbox-footer">
-                    <span>♡ @selectedGalleryItem.Moment.LikeCount likes</span>
+                    <button class="moment-action like-action lightbox-like-action @(selectedGalleryItem.Moment.IsLikedByCurrentUser ? "is-liked" : "")"
+                            @onclick="() => ToggleMomentLikeAsync(selectedGalleryItem.Moment)"
+                            disabled="@busyMomentIds.Contains(selectedGalleryItem.Moment.Id)">
+                        @(selectedGalleryItem.Moment.IsLikedByCurrentUser ? "♥" : "♡")
+                        @selectedGalleryItem.Moment.LikeCount @(selectedGalleryItem.Moment.LikeCount == 1 ? "like" : "likes")
+                    </button>
                     <span>◯ @selectedGalleryItem.Moment.CommentCount comments</span>
                 </div>
+                @if (!string.IsNullOrWhiteSpace(momentActionError))
+                {
+                    <p class="moment-action-error">@momentActionError</p>
+                }
                 <section class="lightbox-comments" aria-label="Moment comments">
                     <div class="lightbox-comments-heading">
                         <strong>Comments</strong>
@@ -576,6 +585,7 @@
     .moment-rejected-label{display:flex;flex-direction:column;gap:3px;margin:9px 0;padding:10px 12px;border:1px solid rgba(190,74,82,.25);border-radius:10px;background:rgba(190,74,82,.07);color:#B84C55;font-size:10px}
     .moment-rejected-label span{color:var(--shandis-text-muted);font-size:9px;font-weight:500}
     .lightbox-footer{display:flex;gap:16px;flex-wrap:wrap}
+    .lightbox-like-action{font-size:10px}
     .lightbox-comments{display:flex;flex-direction:column;min-height:0;margin-top:12px;border-top:1px solid var(--shandis-border);padding-top:10px}
     .lightbox-comments-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:10px}
     .lightbox-comments-heading span{color:var(--shandis-text-muted);font-size:9px}
