@@ -24,6 +24,10 @@ public interface IMomentRepository
         int pageSize,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyDictionary<Guid, int>> GetCommentCountsAsync(
+        IReadOnlyCollection<Guid> momentIds,
+        CancellationToken cancellationToken = default);
+
     Task<MemoryMoment?> GetByIdAsync(
         Guid momentId,
         CancellationToken cancellationToken = default);
