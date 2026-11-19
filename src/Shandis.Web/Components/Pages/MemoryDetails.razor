@@ -822,10 +822,11 @@
 
         try
         {
+            var invitedByUserName = inviteIdentifier.TrimStart().StartsWith("@", StringComparison.Ordinal);
             await ApiClient.CreateInvitationAsync(MemoryId, inviteIdentifier.Trim(), inviteRole);
             inviteIdentifier = string.Empty;
             memoryInvitations = await ApiClient.GetMemoryInvitationsAsync(MemoryId);
-            invitationMessage = inviteIdentifier.StartsWith("@", StringComparison.Ordinal)
+            invitationMessage = invitedByUserName
                 ? "Invitation created. This Shandis member will receive an in-app notification."
                 : "Invitation created. Registered members receive an in-app notification; delivery to new members requires the email service to be configured.";
         }
