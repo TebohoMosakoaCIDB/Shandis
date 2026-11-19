@@ -73,7 +73,10 @@
     .mobile-brand { display: inline-flex; }
     .mobile-brand .brand-mark { width: 31px; height: 31px; font-size: 21px; border-radius: 10px 10px 10px 4px; }
     .mobile-brand .brand-wordmark { font-size: 21px; }
-    .profile-identity, .profile-chevron { display: none; }
+    .profile-identity { display: flex; max-width: 112px; }
+    .profile-name { max-width: 112px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+    .profile-presence { font-size: 8px; }
+    .profile-chevron { display: none; }
     .shandis-content { padding: 22px 18px 40px; }
     .mobile-create-wrap { position: fixed; right: 20px; bottom: 86px; z-index: 25; display: block; }
     .mobile-create-button { display: grid; place-items: center; width: 54px; height: 54px; color: white; background: var(--shandis-primary); border-radius: 19px; box-shadow: 0 8px 24px rgba(242,106,79,.35); font-size: 30px; }
