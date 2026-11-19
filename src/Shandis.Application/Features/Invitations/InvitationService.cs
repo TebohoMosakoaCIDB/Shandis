@@ -139,7 +139,7 @@ public class InvitationService : IInvitationService
             expiresAtUtc: expiresAtUtc,
             invitedUserId: existingUserId);
 
-        await _invitationRepository.UpsertInvitationAsync(
+        var persistedInvitationId = await _invitationRepository.UpsertInvitationAsync(
             invitation,
             existingUserId,
             cancellationToken);
@@ -171,7 +171,7 @@ public class InvitationService : IInvitationService
 
         return new CreateInvitationResult
         {
-            Id = invitation.Id,
+            Id = persistedInvitationId,
             MemoryId = invitation.MemoryId,
             InvitedEmail = invitation.InvitedEmail,
             AssignedRole = invitation.AssignedRole,
