@@ -32,6 +32,10 @@
                 <span class="brand-wordmark">shandis<span>.</span></span>
             </div>
             <div class="topbar-spacer"></div>
+            @if (AuthService.IsAuthenticated)
+            {
+                <NotificationBell />
+            }
             <button class="shandis-icon-btn theme-toggle" type="button"
                     aria-label="Toggle colour theme" title="Toggle light and dark theme"
                     @onclick="ToggleThemeAsync">
