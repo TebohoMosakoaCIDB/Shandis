@@ -87,3 +87,40 @@ button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+
+/* Moment contribution moderation */
+.moderation-help {
+    margin: 0 0 1rem;
+    color: var(--shandis-text-muted);
+    font-size: .92rem;
+}
+.moment-moderation {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    margin: .75rem 0;
+    padding: .75rem 1rem;
+    border: 1px solid rgba(218, 160, 65, .35);
+    border-radius: 12px;
+    background: rgba(218, 160, 65, .08);
+}
+.moment-pending-label {
+    color: #946200;
+    font-size: .85rem;
+    font-weight: 700;
+}
+.moment-moderation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+.moment-rejected-label {
+    display: inline-block;
+    margin: .5rem 0;
+    color: #a33b3b;
+    font-size: .82rem;
+    font-weight: 700;
+}
