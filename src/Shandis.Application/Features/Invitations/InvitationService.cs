@@ -2,7 +2,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using Shandis.Application.Abstractions.Email;
-using Shandis.Application.Abstractions.Persistence;\nusing Shandis.Application.Features.Notifications;
+using Shandis.Application.Abstractions.Persistence;
+using Shandis.Application.Features.Notifications;
 using Shandis.Domain.Entities;
 using Shandis.Domain.Enums;
 
@@ -14,14 +15,17 @@ public class InvitationService : IInvitationService
         TimeSpan.FromDays(7);
 
     private readonly IInvitationRepository _invitationRepository;
-    private readonly IEmailService _emailService;\n    private readonly INotificationService _notificationService;
+    private readonly IEmailService _emailService;
+    private readonly INotificationService _notificationService;
 
     public InvitationService(
         IInvitationRepository invitationRepository,
-        IEmailService emailService)
+        IEmailService emailService,
+        INotificationService notificationService)
     {
         _invitationRepository = invitationRepository;
-        _emailService = emailService;\n        _notificationService = notificationService;
+        _emailService = emailService;
+        _notificationService = notificationService;
     }
 
     public async Task<CreateInvitationResult> CreateAsync(
@@ -113,6 +117,19 @@ public class InvitationService : IInvitationService
             rawToken,
             expiresAtUtc,
             cancellationToken);
+
+        if (existingUserId.HasValue)
+        {
+            await _notificationService.CreateAsync(
+                existingUserId.Value,
+                command.InvitedByUserId,
+                NotificationType.MemoryInvitationReceived,
+                "Memory invitation",
+                $"You have been invited to contribute to \"{memoryTitle}\".",
+                "/shared",
+                command.MemoryId,
+                cancellationToken: cancellationToken);
+        }
 
         return new CreateInvitationResult
         {
@@ -304,6 +321,15 @@ public class InvitationService : IInvitationService
             isExistingParticipant,
             cancellationToken);
 
+        await _notificationService.CreateAsync(
+            invitation.InvitedByUserId,
+            userId,
+            NotificationType.InvitationAccepted,
+            "Invitation accepted",
+            $"{userEmail.Trim()} accepted your invitation to \"{invitation.Memory?.Title ?? "your Memory"}\".",
+            $"/memories/{invitation.MemoryId}",
+            invitation.MemoryId,
+            cancellationToken: cancellationToken);
     }
 
     public async Task DeclineAsync(
@@ -342,6 +368,16 @@ public class InvitationService : IInvitationService
         await _invitationRepository.UpdateAsync(
             invitation,
             cancellationToken);
+
+        await _notificationService.CreateAsync(
+            invitation.InvitedByUserId,
+            userId,
+            NotificationType.InvitationDeclined,
+            "Invitation declined",
+            $"{userEmail.Trim()} declined your invitation to \"{invitation.Memory?.Title ?? "your Memory"}\".",
+            $"/memories/{invitation.MemoryId}",
+            invitation.MemoryId,
+            cancellationToken: cancellationToken);
     }
 
     public async Task RevokeAsync(
