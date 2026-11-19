@@ -15,6 +15,11 @@ public interface IMemoryService
         UpdateMemoryCommand command,
         CancellationToken cancellationToken = default);
 
+    Task<bool> PublishAsync(
+        Guid memoryId,
+        Guid requestingUserId,
+        CancellationToken cancellationToken = default);
+
     Task<bool> ArchiveAsync(
         Guid memoryId,
         Guid requestingUserId,
