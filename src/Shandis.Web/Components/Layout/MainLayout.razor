@@ -112,7 +112,9 @@
             if (!string.IsNullOrWhiteSpace(fullName))
                 return fullName;
 
-            return currentUser?.Email ?? "Signed in";
+            return currentUser?.Email
+                ?? AuthService.CurrentUserEmail
+                ?? "Signed in";
         }
     }
 
