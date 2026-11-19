@@ -131,6 +131,28 @@ public class MomentRepository : IMomentRepository
         return (moments, totalCount);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, int>> GetCommentCountsAsync(
+        IReadOnlyCollection<Guid> momentIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (momentIds.Count == 0)
+            return new Dictionary<Guid, int>();
+
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.MomentComments
+            .AsNoTracking()
+            .Where(x => momentIds.Contains(x.MomentId) && x.DeletedAtUtc == null)
+            .GroupBy(x => x.MomentId)
+            .Select(group => new
+            {
+                MomentId = group.Key,
+                Count = group.Count()
+            })
+            .ToDictionaryAsync(x => x.MomentId, x => x.Count, cancellationToken);
+    }
+
     public async Task<MemoryMoment?> GetByIdAsync(
         Guid momentId,
         CancellationToken cancellationToken = default)
