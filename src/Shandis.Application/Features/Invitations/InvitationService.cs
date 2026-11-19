@@ -2,7 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Shandis.Application.Abstractions.Email;
-using Shandis.Application.Abstractions.Persistence;
+using Shandis.Application.Abstractions.Persistence;\nusing Shandis.Application.Features.Notifications;
 using Shandis.Domain.Entities;
 using Shandis.Domain.Enums;
 
@@ -14,14 +14,14 @@ public class InvitationService : IInvitationService
         TimeSpan.FromDays(7);
 
     private readonly IInvitationRepository _invitationRepository;
-    private readonly IEmailService _emailService;
+    private readonly IEmailService _emailService;\n    private readonly INotificationService _notificationService;
 
     public InvitationService(
         IInvitationRepository invitationRepository,
         IEmailService emailService)
     {
         _invitationRepository = invitationRepository;
-        _emailService = emailService;
+        _emailService = emailService;\n        _notificationService = notificationService;
     }
 
     public async Task<CreateInvitationResult> CreateAsync(
