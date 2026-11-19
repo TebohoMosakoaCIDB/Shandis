@@ -84,7 +84,7 @@
             <p class="invitation-feedback @(publishIsError ? "is-error" : "is-success")">@publishMessage</p>
         }
 
-        @if (canManageInvitations || !string.IsNullOrWhiteSpace(invitationLoadError))
+        @if (canManageInvitations)
         {
             <section class="invitation-panel">
                 <div class="invitation-heading">
@@ -558,13 +558,21 @@
             }
             catch (HttpRequestException ex)
             {
-                var status = ex.StatusCode.HasValue
-                    ? $"HTTP {(int)ex.StatusCode.Value} ({ex.StatusCode.Value})"
-                    : "HTTP request failed";
+                if (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                {
+                    // A 403 is expected for Contributors and Viewers.
+                    // The API only permits the Memory owner to manage invitations.
+                    canManageInvitations = false;
+                    invitationLoadError = null;
+                }
+                else
+                {
+                    var status = ex.StatusCode.HasValue
+                        ? $"HTTP {(int)ex.StatusCode.Value} ({ex.StatusCode.Value})"
+                        : "HTTP request failed";
 
-                invitationLoadError = ex.StatusCode == System.Net.HttpStatusCode.Forbidden
-                    ? "The API says this account is not allowed to manage invitations for this Memory. If you created this Memory with this account, the owner ID in the API does not match the signed-in user."
-                    : $"Invitations could not be loaded ({status}). Details: {ex.Message}";
+                    invitationLoadError = $"Invitations could not be loaded ({status}). Details: {ex.Message}";
+                }
             }
             catch (Exception ex)
             {
