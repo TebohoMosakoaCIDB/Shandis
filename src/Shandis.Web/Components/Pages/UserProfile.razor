@@ -1,0 +1,102 @@
+@page "/u/{UserName}"
+@inject Shandis.Web.Services.ShandisAuthService AuthService
+@inject Shandis.Web.Services.ShandisApiClient ApiClient
+
+<PageTitle>@(profile?.DisplayName ?? "Member") · Shandis</PageTitle>
+
+<div class="public-profile-page">
+    @if (isLoading)
+    {
+        <div class="profile-state">Loading profile…</div>
+    }
+    else if (profile is null)
+    {
+        <div class="profile-state"><h1>We couldn't find that member.</h1><a href="/members">Find people</a></div>
+    }
+    else
+    {
+        <section class="public-profile-card">
+            @if (!string.IsNullOrWhiteSpace(profile.ProfilePictureUrl))
+            {
+                <img class="public-avatar" src="@profile.ProfilePictureUrl" alt="@profile.DisplayName" />
+            }
+            else
+            {
+                <div class="public-avatar initials">@Initials</div>
+            }
+            <p class="eyebrow">SHANDIS MEMBER</p>
+            <h1>@profile.DisplayName</h1>
+            <p class="username">@@@profile.UserName</p>
+            @if (!string.IsNullOrWhiteSpace(profile.Bio))
+            {
+                <p class="bio">@profile.Bio</p>
+            }
+            <p class="joined">Sharing experiences since @profile.CreatedAtUtc.ToString("MMMM yyyy")</p>
+            <a class="back-to-members" href="/members">← Find more people</a>
+        </section>
+    }
+</div>
+
+<style>
+    .public-profile-page{max-width:720px;margin:0 auto;padding:25px 0 60px;color:var(--shandis-text)}
+    .public-profile-card{display:flex;flex-direction:column;align-items:center;padding:38px 25px;text-align:center;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:18px}
+    .public-avatar{width:100px;height:100px;border-radius:50%;object-fit:cover;margin-bottom:17px}.public-avatar.initials{display:grid;place-items:center;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:30px;font-weight:850}
+    .eyebrow{margin:0 0 7px;color:var(--shandis-primary);font-size:9px;font-weight:850;letter-spacing:.15em}
+    .public-profile-card h1{margin:0;font:850 clamp(25px,4vw,34px) Manrope,sans-serif;letter-spacing:-.04em}
+    .username{margin:6px 0 0;color:var(--shandis-primary);font-size:11px;font-weight:800}
+    .bio{max-width:460px;margin:18px 0 0;color:var(--shandis-text-muted);font-size:12px;line-height:1.7;white-space:pre-wrap}
+    .joined{margin:17px 0 0;color:var(--shandis-text-muted);font-size:9px}
+    .back-to-members{margin-top:23px;color:var(--shandis-primary);font-size:10px;font-weight:800;text-decoration:none}
+    .profile-state{padding:50px 20px;text-align:center;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:16px;color:var(--shandis-text-muted);font-size:11px}
+    .profile-state a{color:var(--shandis-primary)}
+</style>
+
+@code {
+    [Parameter] public string UserName { get; set; } = string.Empty;
+    private UserProfileItem? profile;
+    private bool isLoading = true;
+
+    private string Initials
+    {
+        get
+        {
+            var parts = (profile?.DisplayName ?? "Shandis").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length > 1
+                ? $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
+                : parts[0][..1].ToUpperInvariant();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await AuthService.InitializeAsync();
+        await LoadAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(UserName) && !isLoading)
+            await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        try
+        {
+            profile = await ApiClient.GetUserProfileAsync(UserName);
+        }
+        catch
+        {
+            profile = null;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+}
