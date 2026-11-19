@@ -28,6 +28,10 @@ public interface IMomentRepository
         IReadOnlyCollection<Guid> momentIds,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Guid>> GetActiveParticipantUserIdsAsync(
+        Guid memoryId,
+        CancellationToken cancellationToken = default);
+
     Task<MemoryMoment?> GetByIdAsync(
         Guid momentId,
         CancellationToken cancellationToken = default);
