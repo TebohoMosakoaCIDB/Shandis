@@ -158,7 +158,6 @@ public class MemoryRepository : IMemoryRepository
             .AsNoTracking()
             .Where(memory =>
                 memory.DeletedAtUtc == null &&
-                memory.Visibility == MemoryVisibility.Private &&
                 memory.Participants.Any(participant =>
                     participant.UserId == userId &&
                     participant.Role != ParticipantRole.Owner &&
