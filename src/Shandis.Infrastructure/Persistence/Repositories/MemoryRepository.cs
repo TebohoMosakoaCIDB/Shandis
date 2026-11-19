@@ -120,6 +120,7 @@ public class MemoryRepository : IMemoryRepository
         var items = await query
             .Include(x => x.Category)
             .Include(x => x.Place)
+            .Include(x => x.Participants)
             .OrderByDescending(x => x.CreatedAtUtc)
             .ThenByDescending(x => x.Id)
             .Skip((page - 1) * pageSize)
