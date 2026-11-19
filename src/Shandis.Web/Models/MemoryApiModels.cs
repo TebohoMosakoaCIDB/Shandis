@@ -35,6 +35,7 @@ public sealed class MemoryDetails
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public Guid OwnerId { get; set; }
+    public int? MyRole { get; set; }
     public string? CategoryName { get; set; }
     public string? PlaceName { get; set; }
     public string? PlaceAddress { get; set; }
