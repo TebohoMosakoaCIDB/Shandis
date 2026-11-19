@@ -1144,6 +1144,11 @@
         {
             var created = await ApiClient.CreateMomentCommentAsync(momentId, content);
             activeComments.Add(created);
+
+            var moment = moments.FirstOrDefault(item => item.Id == momentId);
+            if (moment is not null)
+                moment.CommentCount++;
+
             newCommentContent = string.Empty;
         }
         catch (Exception)
