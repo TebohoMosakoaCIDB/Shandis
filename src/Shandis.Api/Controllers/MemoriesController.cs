@@ -156,6 +156,7 @@ public class MemoriesController : ControllerBase
             Title = result.Title,
             Description = result.Description,
             OwnerId = result.OwnerId,
+            MyRole = result.MyRole,
             CategoryId = result.CategoryId,
             CategoryName = result.CategoryName,
             PlaceId = result.PlaceId,
