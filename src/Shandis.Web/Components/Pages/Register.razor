@@ -29,6 +29,14 @@
         <EditForm Model="model" OnValidSubmit="HandleRegisterAsync">
             <DataAnnotationsValidator />
             <div class="auth-field">
+                <label for="username">Username</label>
+                <InputText id="username" @bind-Value="model.UserName"
+                           autocomplete="username" placeholder="e.g. teboho_m" />
+                <small>Your unique Shandis handle. Letters, numbers and underscores only.</small>
+                <ValidationMessage For="@(() => model.UserName)" />
+            </div>
+
+            <div class="auth-field">
                 <label for="email">Email address</label>
                 <InputText id="email" @bind-Value="model.Email" type="email"
                            autocomplete="email" placeholder="you@example.com" />
@@ -71,7 +79,11 @@
 
         try
         {
-            var result = await AuthService.RegisterAsync(model.Email, model.Password);
+            var result = await AuthService.RegisterAsync(
+                model.UserName,
+                model.Email,
+                model.Password);
+
             if (!result.Success)
             {
                 errorMessage = result.Error ?? "We couldn't create your account. Please try again.";
