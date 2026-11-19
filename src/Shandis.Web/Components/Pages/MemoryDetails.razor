@@ -194,6 +194,9 @@
                             {
                                 <img src="@item.Media.Url" alt="@item.Media.FileName" loading="lazy" />
                             }
+                            <span class="tile-comment-count" aria-label="@item.Moment.CommentCount comments">
+                                ◯ @item.Moment.CommentCount
+                            </span>
                             <span class="tile-overlay">
                                 <span>♡ @item.Moment.LikeCount</span>
                                 <span>◯ @item.Moment.CommentCount</span>
@@ -530,6 +533,7 @@
     .gallery-tile img,.gallery-tile video{display:block;width:100%;height:100%;object-fit:cover;transition:transform .25s}
     .gallery-tile:hover img,.gallery-tile:hover video{transform:scale(1.045)}
     .tile-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:22px;background:rgba(38,29,27,.42);color:#fff;font-size:11px;font-weight:800;opacity:0;transition:opacity .15s}
+    .tile-comment-count{position:absolute;right:8px;bottom:8px;z-index:1;padding:5px 8px;border:1px solid rgba(255,255,255,.3);border-radius:999px;background:rgba(35,28,26,.72);color:#fff;font-size:9px;font-weight:800;pointer-events:none}
     .gallery-tile:hover .tile-overlay,.gallery-tile:focus-visible .tile-overlay{opacity:1}
     .tile-video-icon{position:absolute;right:10px;top:9px;color:white;text-shadow:0 1px 5px #333;font-size:14px}
     .gallery-empty{min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:25px;border:1px dashed var(--shandis-border);border-radius:14px;text-align:center}
