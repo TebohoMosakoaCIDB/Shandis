@@ -1,5 +1,4 @@
 @inject Shandis.Web.Services.ShandisApiClient ApiClient
-@inject Shandis.Web.Services.ShandisAuthService AuthService
 @inject NavigationManager Navigation
 
 <div class="notification-bell">
@@ -77,10 +76,7 @@
     {
         if (firstRender)
         {
-            await AuthService.InitializeAsync();
-            if (AuthService.IsAuthenticated)
-                await LoadAsync();
-
+            await LoadAsync();
             StateHasChanged();
         }
     }
