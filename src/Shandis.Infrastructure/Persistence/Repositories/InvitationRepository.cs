@@ -78,6 +78,56 @@ public class InvitationRepository : IInvitationRepository
             cancellationToken);
     }
 
+    public async Task UpsertInvitationAsync(
+        MemoryInvitation invitation,
+        Guid? invitedUserId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext =
+            await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        var existingInvitations = await dbContext.MemoryInvitations
+            .Where(x => x.MemoryId == invitation.MemoryId &&
+                        x.InvitedEmail == invitation.InvitedEmail &&
+                        x.DeletedAtUtc == null)
+            .OrderBy(x => x.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+
+        if (existingInvitations.Count == 0)
+        {
+            dbContext.MemoryInvitations.Add(invitation);
+        }
+        else
+        {
+            var canonical = existingInvitations[0];
+            canonical.Reissue(
+                invitedUserId,
+                invitation.AssignedRole,
+                invitation.TokenHash,
+                invitation.ExpiresAtUtc);
+
+            foreach (var duplicate in existingInvitations.Skip(1))
+                duplicate.Supersede();
+
+            if (invitedUserId.HasValue)
+            {
+                var participant = await dbContext.MemoryParticipants
+                    .FirstOrDefaultAsync(x =>
+                        x.MemoryId == invitation.MemoryId &&
+                        x.UserId == invitedUserId.Value,
+                        cancellationToken);
+
+                if (participant is not null && participant.Status == ParticipantStatus.Active)
+                    participant.Remove();
+            }
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
     public async Task AddAsync(
         MemoryInvitation invitation,
         CancellationToken cancellationToken = default)
