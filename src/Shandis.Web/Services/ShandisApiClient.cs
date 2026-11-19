@@ -139,6 +139,75 @@ public sealed class ShandisApiClient(HttpClient httpClient)
             ?? throw new InvalidOperationException("The Shandis API returned an empty comment response.");
     }
 
+    public async Task<InvitationItem> CreateInvitationAsync(
+        Guid memoryId,
+        string invitedEmail,
+        int assignedRole,
+        CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.PostAsJsonAsync(
+            $"api/memories/{memoryId}/invitations",
+            new CreateInvitationRequest
+            {
+                InvitedEmail = invitedEmail,
+                AssignedRole = assignedRole
+            },
+            cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+
+        return await response.Content.ReadFromJsonAsync<InvitationItem>(cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException("The Shandis API returned an empty invitation response.");
+    }
+
+    public async Task<List<InvitationItem>> GetMemoryInvitationsAsync(
+        Guid memoryId,
+        CancellationToken cancellationToken = default)
+        => await GetRequiredAsync<List<InvitationItem>>(
+            $"api/memories/{memoryId}/invitations",
+            cancellationToken);
+
+    public async Task<ReceivedInvitationsResponse> GetReceivedInvitationsAsync(
+        CancellationToken cancellationToken = default)
+        => await GetRequiredAsync<ReceivedInvitationsResponse>(
+            "api/invitations/received",
+            cancellationToken);
+
+    public async Task AcceptInvitationAsync(
+        Guid invitationId,
+        CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.PostAsync(
+            $"api/invitations/{invitationId}/accept",
+            content: null,
+            cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public async Task DeclineInvitationAsync(
+        Guid invitationId,
+        CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.PostAsync(
+            $"api/invitations/{invitationId}/decline",
+            content: null,
+            cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public async Task RevokeInvitationAsync(
+        Guid invitationId,
+        CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.DeleteAsync(
+            $"api/invitations/{invitationId}",
+            cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
     private async Task<T> GetRequiredAsync<T>(string requestUri, CancellationToken cancellationToken)
     {
         await PrepareRequestAsync(cancellationToken);
