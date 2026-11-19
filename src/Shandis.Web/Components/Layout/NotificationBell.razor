@@ -1,0 +1,172 @@
+@inject Shandis.Web.Services.ShandisApiClient ApiClient
+@inject Shandis.Web.Services.ShandisAuthService AuthService
+@inject NavigationManager Navigation
+
+<div class="notification-bell">
+    <button class="notification-trigger" type="button"
+            aria-label="Notifications" aria-expanded="@isOpen"
+            @onclick="ToggleAsync">
+        <span class="notification-bell-icon" aria-hidden="true">♧</span>
+        @if (unreadCount > 0)
+        {
+            <span class="notification-count">@ (unreadCount > 99 ? "99+" : unreadCount)</span>
+        }
+    </button>
+
+    @if (isOpen)
+    {
+        <section class="notification-panel" aria-label="Notifications">
+            <header class="notification-panel-header">
+                <div>
+                    <h3>Notifications</h3>
+                    <span>@(unreadCount == 0 ? "You're all caught up" : $"{unreadCount} unread")</span>
+                </div>
+                @if (unreadCount > 0)
+                {
+                    <button type="button" class="notification-mark-all" @onclick="MarkAllReadAsync">
+                        Mark all read
+                    </button>
+                }
+            </header>
+
+            @if (isLoading)
+            {
+                <div class="notification-empty">Loading notifications…</div>
+            }
+            else if (notifications.Count == 0)
+            {
+                <div class="notification-empty">
+                    <span class="notification-empty-icon">♧</span>
+                    <strong>No notifications yet</strong>
+                    <span>We'll let you know when something happens in your Memories.</span>
+                </div>
+            }
+            else
+            {
+                <div class="notification-list">
+                    @foreach (var item in notifications)
+                    {
+                        <button type="button"
+                                class="notification-item @(item.IsRead ? "" : "unread")"
+                                @onclick="() => OpenNotificationAsync(item)">
+                            <span class="notification-item-icon">@GetIcon(item.Type)</span>
+                            <span class="notification-item-content">
+                                <strong>@item.Title</strong>
+                                <span>@item.Message</span>
+                                <small>@FormatAge(item.CreatedAtUtc)</small>
+                            </span>
+                            @if (!item.IsRead)
+                            {
+                                <span class="notification-unread-dot"></span>
+                            }
+                        </button>
+                    }
+                </div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private readonly List<Shandis.Web.Models.NotificationItem> notifications = [];
+    private bool isOpen;
+    private bool isLoading;
+    private int unreadCount;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await AuthService.InitializeAsync();
+            if (AuthService.IsAuthenticated)
+                await LoadAsync();
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleAsync()
+    {
+        isOpen = !isOpen;
+        if (isOpen)
+            await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var result = await ApiClient.GetNotificationsAsync();
+            notifications.Clear();
+            notifications.AddRange(result.Items);
+            unreadCount = result.UnreadCount;
+        }
+        catch
+        {
+            // The rest of the navigation remains usable if notifications are unavailable.
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OpenNotificationAsync(Shandis.Web.Models.NotificationItem item)
+    {
+        if (!item.IsRead)
+        {
+            try
+            {
+                await ApiClient.MarkNotificationReadAsync(item.Id);
+                item.IsRead = true;
+                unreadCount = Math.Max(0, unreadCount - 1);
+            }
+            catch
+            {
+                // Navigation should still work if marking as read fails.
+            }
+        }
+
+        isOpen = false;
+        Navigation.NavigateTo(string.IsNullOrWhiteSpace(item.TargetUrl) ? "/" : item.TargetUrl);
+    }
+
+    private async Task MarkAllReadAsync()
+    {
+        try
+        {
+            await ApiClient.MarkAllNotificationsReadAsync();
+            foreach (var item in notifications)
+                item.IsRead = true;
+            unreadCount = 0;
+        }
+        catch
+        {
+            // Keep the existing notification state if the request fails.
+        }
+    }
+
+    private static string GetIcon(int type) => type switch
+    {
+        1 => "✉",
+        2 => "✓",
+        3 => "↩",
+        4 => "◷",
+        5 => "✓",
+        6 => "×",
+        7 => "♡",
+        8 => "☰",
+        _ => "•"
+    };
+
+    private static string FormatAge(DateTime createdAtUtc)
+    {
+        var age = DateTime.UtcNow - DateTime.SpecifyKind(createdAtUtc, DateTimeKind.Utc);
+        if (age.TotalMinutes < 1) return "Just now";
+        if (age.TotalHours < 1) return $"{(int)age.TotalMinutes}m ago";
+        if (age.TotalDays < 1) return $"{(int)age.TotalHours}h ago";
+        if (age.TotalDays < 7) return $"{(int)age.TotalDays}d ago";
+        return createdAtUtc.ToLocalTime().ToString("dd MMM yyyy");
+    }
+}
