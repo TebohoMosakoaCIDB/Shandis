@@ -65,7 +65,7 @@
             </div>
         </section>
 
-        @if (canManageInvitations)
+        @if (canManageInvitations || !string.IsNullOrWhiteSpace(invitationLoadError))
         {
             <section class="invitation-panel">
                 <div class="invitation-heading">
@@ -121,6 +121,10 @@
                             </div>
                         }
                     </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(invitationLoadError))
+                {
+                    <p class="invitation-feedback is-error">@invitationLoadError</p>
                 }
                 <p class="invitation-note">Invitations expire after 7 days. Invitees can accept from Shared with Me after signing in with this email address. Email notifications are not connected yet.</p>
             </section>
@@ -476,6 +480,7 @@
     private int momentsTotal;
     private int momentsTotalPages;
     private bool canManageInvitations;
+    private string? invitationLoadError;
     private List<Shandis.Web.Models.InvitationItem> memoryInvitations = [];
     private string inviteEmail = string.Empty;
     private int inviteRole = 2;
@@ -517,20 +522,28 @@
                 return;
             }
 
+            canManageInvitations = false;
+            invitationLoadError = null;
+            memoryInvitations = [];
+
             try
             {
                 memoryInvitations = await ApiClient.GetMemoryInvitationsAsync(MemoryId);
                 canManageInvitations = true;
             }
-            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            catch (HttpRequestException ex)
             {
-                canManageInvitations = false;
-                memoryInvitations = [];
+                var status = ex.StatusCode.HasValue
+                    ? $"HTTP {(int)ex.StatusCode.Value} ({ex.StatusCode.Value})"
+                    : "HTTP request failed";
+
+                invitationLoadError = ex.StatusCode == System.Net.HttpStatusCode.Forbidden
+                    ? "The API says this account is not allowed to manage invitations for this Memory. If you created this Memory with this account, the owner ID in the API does not match the signed-in user."
+                    : $"Invitations could not be loaded ({status}). Details: {ex.Message}";
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                canManageInvitations = false;
-                memoryInvitations = [];
+                invitationLoadError = $"Invitations could not be loaded. Details: {ex.Message}";
             }
 
             var result = await ApiClient.GetMomentsAsync(MemoryId, 1, PageSize);
