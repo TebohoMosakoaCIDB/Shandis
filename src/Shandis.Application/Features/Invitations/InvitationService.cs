@@ -1,4 +1,5 @@
 ﻿
+using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using System.Text;
 using Shandis.Application.Abstractions.Email;
@@ -38,8 +39,8 @@ public class InvitationService : IInvitationService
         if (command.InvitedByUserId == Guid.Empty)
             throw new ArgumentException("A valid inviting user ID is required.");
 
-        if (string.IsNullOrWhiteSpace(command.InvitedEmail))
-            throw new ArgumentException("An email address is required.");
+        if (string.IsNullOrWhiteSpace(command.Invitee))
+            throw new ArgumentException("Enter a Shandis username or email address.");
 
         if (command.AssignedRole is not InvitationRole.Viewer
             and not InvitationRole.Contributor)
@@ -48,7 +49,53 @@ public class InvitationService : IInvitationService
                 "Only Viewer and Contributor invitation roles are supported.");
         }
 
-        var email = command.InvitedEmail.Trim().ToLowerInvariant();
+        var invitee = command.Invitee.Trim();
+        string email;
+        Guid? existingUserId;
+
+        if (invitee.StartsWith("@", StringComparison.Ordinal))
+        {
+            var userName = invitee[1..].Trim().ToLowerInvariant();
+
+            if (userName.Length is < 3 or > 30 ||
+                userName.Any(character =>
+                    !char.IsAsciiLetterOrDigit(character) && character != '_'))
+            {
+                throw new ArgumentException(
+                    "Enter a valid @username using 3–30 letters, numbers or underscores.");
+            }
+
+            existingUserId =
+                await _invitationRepository.FindUserIdByUserNameAsync(
+                    userName,
+                    cancellationToken);
+
+            if (!existingUserId.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"No Shandis member was found with the username @{userName}. You can invite someone who has not joined yet using their email address.");
+            }
+
+            var registeredEmail = await _invitationRepository.GetUserEmailAsync(
+                existingUserId.Value,
+                cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(registeredEmail))
+                throw new InvalidOperationException("The selected Shandis member does not have a usable email address.");
+
+            email = registeredEmail.Trim().ToLowerInvariant();
+        }
+        else
+        {
+            if (!new EmailAddressAttribute().IsValid(invitee))
+                throw new ArgumentException("Enter a valid email address or a Shandis @username.");
+
+            email = invitee.ToLowerInvariant();
+            existingUserId =
+                await _invitationRepository.FindUserIdByEmailAsync(
+                    email,
+                    cancellationToken);
+        }
 
         var memoryOwnerId =
             await _invitationRepository.GetMemoryOwnerIdAsync(
@@ -69,11 +116,6 @@ public class InvitationService : IInvitationService
         if (string.Equals(ownerEmail, email, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException(
                 "You cannot invite yourself to your own Memory.");
-
-        var existingUserId =
-            await _invitationRepository.FindUserIdByEmailAsync(
-                email,
-                cancellationToken);
 
         if (existingUserId == command.InvitedByUserId)
             throw new InvalidOperationException(
@@ -111,12 +153,17 @@ public class InvitationService : IInvitationService
             invitation,
             cancellationToken);
 
-        await _emailService.SendMemoryInvitationAsync(
-            email,
-            memoryTitle,
-            rawToken,
-            expiresAtUtc,
-            cancellationToken);
+        // Registered members receive an in-app notification. Email is retained
+        // for invitations sent to people who have not created a Shandis account yet.
+        if (!existingUserId.HasValue)
+        {
+            await _emailService.SendMemoryInvitationAsync(
+                email,
+                memoryTitle,
+                rawToken,
+                expiresAtUtc,
+                cancellationToken);
+        }
 
         if (existingUserId.HasValue)
         {
