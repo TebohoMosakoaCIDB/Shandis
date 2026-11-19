@@ -163,7 +163,7 @@ public class InvitationService : IInvitationService
                 command.InvitedByUserId,
                 NotificationType.MemoryInvitationReceived,
                 "Memory invitation",
-                $"You have been invited to contribute to \"{memoryTitle}\".",
+                $"Your invitation to \"{memoryTitle}\" has been updated. Accept it to join as a {(command.AssignedRole == InvitationRole.Contributor ? "Contributor" : "Viewer")}.",
                 "/shared",
                 command.MemoryId,
                 cancellationToken: cancellationToken);
