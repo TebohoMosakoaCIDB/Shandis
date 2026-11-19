@@ -65,6 +65,67 @@
             </div>
         </section>
 
+        @if (canManageInvitations)
+        {
+            <section class="invitation-panel">
+                <div class="invitation-heading">
+                    <div>
+                        <p class="eyebrow">BRING EVERYONE TOGETHER</p>
+                        <h2>Invite people</h2>
+                        <p>Invite someone to view or contribute to this Memory.</p>
+                    </div>
+                    <span class="invitation-count">@memoryInvitations.Count invitations</span>
+                </div>
+
+                <form class="invitation-form" @onsubmit="SendInvitationAsync" @onsubmit:preventDefault>
+                    <label>
+                        <span>Email address</span>
+                        <input type="email" @bind="inviteEmail" maxlength="320" placeholder="friend@example.com" required />
+                    </label>
+                    <label>
+                        <span>Access</span>
+                        <select @bind="inviteRole">
+                            <option value="2">Contributor — can add moments</option>
+                            <option value="1">Viewer — can view only</option>
+                        </select>
+                    </label>
+                    <button class="shandis-btn shandis-btn-primary" type="submit" disabled="@isSendingInvitation">
+                        @(isSendingInvitation ? "Sending…" : "＋ Send invite")
+                    </button>
+                </form>
+
+                @if (!string.IsNullOrWhiteSpace(invitationMessage))
+                {
+                    <p class="invitation-feedback @(invitationIsError ? "is-error" : "is-success")">@invitationMessage</p>
+                }
+
+                @if (memoryInvitations.Count > 0)
+                {
+                    <div class="invitation-list">
+                        @foreach (var invitation in memoryInvitations)
+                        {
+                            <div class="invitation-row" @key="invitation.Id">
+                                <div class="invitation-person">
+                                    <span class="invitation-avatar">@Initials(invitation.InvitedEmail)</span>
+                                    <div>
+                                        <strong>@invitation.InvitedEmail</strong>
+                                        <span>@(invitation.AssignedRole == 2 ? "Contributor" : "Viewer") · @InvitationStatusText(invitation.Status)</span>
+                                    </div>
+                                </div>
+                                @if (invitation.Status == 1)
+                                {
+                                    <button class="invitation-revoke" @onclick="() => RevokeInvitationAsync(invitation.Id)" disabled="@busyInvitationIds.Contains(invitation.Id)">
+                                        Revoke
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                <p class="invitation-note">Invitations expire after 7 days. Invitees must sign in with the invited email address to accept.</p>
+            </section>
+        }
+
         <section class="gallery-section">
             <div class="section-heading">
                 <div>
@@ -302,6 +363,27 @@
     .memory-profile-count strong{font:850 20px Manrope,sans-serif}.memory-profile-count span{color:var(--shandis-text-muted);font-size:9px}
     .memory-profile-actions{display:flex;align-items:center;gap:22px;padding:12px 28px;border-top:1px solid var(--shandis-border)}
     .memory-profile-stat{display:flex;gap:5px;align-items:baseline;font-size:10px;color:var(--shandis-text-muted)}
+    .invitation-panel{margin-top:18px;padding:22px 25px;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:16px;box-shadow:var(--shandis-shadow)}
+    .invitation-heading{display:flex;align-items:center;justify-content:space-between;gap:15px}
+    .invitation-heading h2{margin:0;font:850 20px Manrope,sans-serif;letter-spacing:-.03em}
+    .invitation-heading p:not(.eyebrow){margin:5px 0 0;color:var(--shandis-text-muted);font-size:10px}
+    .invitation-count{padding:6px 10px;border-radius:999px;background:var(--shandis-surface-muted);color:var(--shandis-text-muted);font-size:9px;font-weight:800}
+    .invitation-form{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;align-items:end;gap:10px;margin-top:18px}
+    .invitation-form label{display:grid;gap:6px;min-width:0}
+    .invitation-form label span{color:var(--shandis-text-muted);font-size:9px;font-weight:800}
+    .invitation-form input,.invitation-form select{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--shandis-border);border-radius:9px;background:var(--shandis-surface);color:var(--shandis-text);font:inherit;font-size:10px}
+    .invitation-form input:focus,.invitation-form select:focus{outline:2px solid var(--shandis-primary-soft);border-color:var(--shandis-primary)}
+    .invitation-form button{white-space:nowrap}
+    .invitation-feedback{margin:12px 0 0;font-size:10px;font-weight:700}
+    .invitation-feedback.is-success{color:#39845D}.invitation-feedback.is-error{color:#C34D55}
+    .invitation-list{display:grid;gap:0;margin-top:15px;border-top:1px solid var(--shandis-border)}
+    .invitation-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--shandis-border)}
+    .invitation-person{display:flex;align-items:center;gap:10px;min-width:0}
+    .invitation-avatar{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border-radius:50%;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:9px;font-weight:850}
+    .invitation-person>div{display:grid;gap:3px;min-width:0}.invitation-person strong{overflow-wrap:anywhere;font-size:10px}.invitation-person span{color:var(--shandis-text-muted);font-size:9px}
+    .invitation-revoke{padding:6px 10px;border:1px solid var(--shandis-border);border-radius:7px;background:transparent;color:var(--shandis-text-muted);font-size:9px;font-weight:800;cursor:pointer}
+    .invitation-revoke:hover{border-color:#C34D55;color:#C34D55}.invitation-revoke:disabled{opacity:.5}
+    .invitation-note{margin:12px 0 0;color:var(--shandis-text-muted);font-size:9px}
     .memory-profile-stat strong{color:var(--shandis-text);font-size:12px}.memory-profile-spacer{flex:1}
     .gallery-section,.moments-section{margin-top:35px}
     .section-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:15px;margin-bottom:17px}
@@ -372,6 +454,7 @@
     .comment-composer .shandis-btn{padding:8px 13px;font-size:9px}
     @@keyframes spin{to{transform:rotate(360deg)}}
     @@media(max-width:760px){.memory-details-page{padding:10px 14px 85px}.memory-profile-content{gap:12px;padding:0 16px 16px}.memory-profile-avatar{flex-basis:68px;width:68px;height:68px;font-size:19px}.memory-profile-count{padding:8px 10px}.memory-profile-actions{padding:10px 16px}.memory-profile-art{height:110px;padding:18px}.profile-art-mark{font-size:40px}.profile-art-label{font-size:7px}.lightbox-content{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto;height:min(780px,90vh);max-width:600px}.lightbox-details{max-height:190px;overflow:auto;padding:13px}.lightbox-author{padding:9px 0}.lightbox-details h3{margin:10px 0 3px}.lightbox-footer{padding-top:8px}.gallery-lightbox{padding:35px 10px}.lightbox-nav{width:32px;height:32px;font-size:23px}}
+    @@media(max-width:650px){.invitation-panel{padding:17px}.invitation-form{grid-template-columns:1fr}.invitation-form button{justify-self:start}}
     @@media(max-width:500px){.memory-profile-content{align-items:flex-start;flex-wrap:wrap}.memory-profile-count{margin-left:auto;border-left:0}.memory-profile-main{flex-basis:calc(100% - 85px)}.memory-profile-main h1{font-size:22px}.memory-profile-actions{gap:13px}.section-heading{align-items:flex-start;flex-direction:column}.gallery-filters{align-self:flex-start}.gallery-grid{gap:2px}.gallery-lightbox{padding:30px 6px}.lightbox-content{height:90vh}.lightbox-close{top:4px;right:10px}}
 </style>
 
@@ -392,6 +475,14 @@
     private const int PageSize = 20;
     private int momentsTotal;
     private int momentsTotalPages;
+    private bool canManageInvitations;
+    private List<Shandis.Web.Models.InvitationItem> memoryInvitations = [];
+    private string inviteEmail = string.Empty;
+    private int inviteRole = 2;
+    private bool isSendingInvitation;
+    private string? invitationMessage;
+    private bool invitationIsError;
+    private readonly HashSet<Guid> busyInvitationIds = [];
 
     private List<GalleryItem> FilteredGalleryItems => galleryFilter switch
     {
@@ -426,6 +517,22 @@
                 return;
             }
 
+            try
+            {
+                memoryInvitations = await ApiClient.GetMemoryInvitationsAsync(MemoryId);
+                canManageInvitations = true;
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                canManageInvitations = false;
+                memoryInvitations = [];
+            }
+            catch (Exception)
+            {
+                canManageInvitations = false;
+                memoryInvitations = [];
+            }
+
             var result = await ApiClient.GetMomentsAsync(MemoryId, 1, PageSize);
             moments = result.Moments;
             momentsPage = result.Page;
@@ -452,6 +559,67 @@
             StateHasChanged();
         }
     }
+
+    private async Task SendInvitationAsync()
+    {
+        if (string.IsNullOrWhiteSpace(inviteEmail) || isSendingInvitation)
+            return;
+
+        isSendingInvitation = true;
+        invitationMessage = null;
+        invitationIsError = false;
+
+        try
+        {
+            await ApiClient.CreateInvitationAsync(MemoryId, inviteEmail.Trim(), inviteRole);
+            inviteEmail = string.Empty;
+            memoryInvitations = await ApiClient.GetMemoryInvitationsAsync(MemoryId);
+            invitationMessage = "Invitation created. The invitee can accept it from Shared with Me after signing in with this email address.";
+        }
+        catch (Exception ex)
+        {
+            invitationIsError = true;
+            invitationMessage = ex.Message;
+        }
+        finally
+        {
+            isSendingInvitation = false;
+        }
+    }
+
+    private async Task RevokeInvitationAsync(Guid invitationId)
+    {
+        if (!busyInvitationIds.Add(invitationId))
+            return;
+
+        invitationMessage = null;
+        try
+        {
+            await ApiClient.RevokeInvitationAsync(invitationId);
+            memoryInvitations = await ApiClient.GetMemoryInvitationsAsync(MemoryId);
+            invitationMessage = "Invitation revoked.";
+            invitationIsError = false;
+        }
+        catch (Exception ex)
+        {
+            invitationMessage = ex.Message;
+            invitationIsError = true;
+        }
+        finally
+        {
+            busyInvitationIds.Remove(invitationId);
+        }
+    }
+
+    private static string InvitationStatusText(int status) => status switch
+    {
+        1 => "Pending",
+        2 => "Accepted",
+        3 => "Declined",
+        4 => "Revoked",
+        5 => "Expired",
+        _ => "Unknown"
+    };
 
     private void RebuildGallery()
     {
