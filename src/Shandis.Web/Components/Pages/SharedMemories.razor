@@ -11,6 +11,57 @@
         <p>Experiences your friends and family have invited you into.</p>
     </header>
 
+    @if (!isLoading && receivedInvitations.Count > 0)
+    {
+        <section class="invitation-inbox">
+            <div class="inbox-heading">
+                <div>
+                    <p class="eyebrow">YOU'RE INVITED</p>
+                    <h2>Memory invitations</h2>
+                    <p>Join the people collecting this experience together.</p>
+                </div>
+                <span class="inbox-count">@receivedInvitations.Count pending</span>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(invitationMessage))
+            {
+                <p class="inbox-feedback @(invitationIsError ? "is-error" : "is-success")">@invitationMessage</p>
+            }
+            <div class="inbox-list">
+                @foreach (var invitation in receivedInvitations)
+                {
+                    <article class="inbox-invitation" @key="invitation.Id">
+                        <div class="inbox-memory-mark">✳</div>
+                        <div class="inbox-invitation-details">
+                            <strong>@invitation.MemoryTitle</strong>
+                            <span>Invited as @(invitation.AssignedRole == 2 ? "Contributor" : "Viewer")</span>
+                            <small>Expires @invitation.ExpiresAtUtc.ToLocalTime().ToString("d MMM yyyy")</small>
+                        </div>
+                        <div class="inbox-actions">
+                            <button class="shandis-btn shandis-btn-primary"
+                                    @onclick="() => AcceptAsync(invitation.Id)"
+                                    disabled="@busyInvitationIds.Contains(invitation.Id)">
+                                Accept
+                            </button>
+                            <button class="inbox-decline"
+                                    @onclick="() => DeclineAsync(invitation.Id)"
+                                    disabled="@busyInvitationIds.Contains(invitation.Id)">
+                                Decline
+                            </button>
+                        </div>
+                    </article>
+                }
+            </div>
+        </section>
+    }
+    else if (!isLoading && !string.IsNullOrWhiteSpace(invitationMessage))
+    {
+        <p class="inbox-feedback @(invitationIsError ? "is-error" : "is-success")">@invitationMessage</p>
+    }
+    else if (!isLoading && !string.IsNullOrWhiteSpace(invitationError))
+    {
+        <p class="inbox-load-error">@invitationError</p>
+    }
+
     @if (isLoading)
     {
         <div class="shared-state"><span class="loading-pulse"></span><p>Finding memories shared with you…</p></div>
@@ -55,6 +106,19 @@
     .shared-heading h1{margin:0;font:850 clamp(28px,4vw,38px) Manrope,sans-serif;letter-spacing:-.045em}
     .shared-heading>p:last-child{color:var(--shandis-text-muted);font-size:12px;margin:8px 0 28px}
     .shared-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px}
+    .invitation-inbox{margin:0 0 28px;padding:20px 22px;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:16px;box-shadow:var(--shandis-shadow)}
+    .inbox-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .inbox-heading h2{margin:0;font:850 20px Manrope,sans-serif;letter-spacing:-.03em}
+    .inbox-heading p:not(.eyebrow){margin:5px 0 0;color:var(--shandis-text-muted);font-size:10px}
+    .inbox-count{padding:6px 10px;border-radius:999px;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:9px;font-weight:850}
+    .inbox-list{display:grid;gap:0;margin-top:14px}
+    .inbox-invitation{display:flex;align-items:center;gap:12px;padding:13px 0;border-top:1px solid var(--shandis-border)}
+    .inbox-memory-mark{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#E7B6A8,#B9C9B7);color:#70473D;font-size:20px}
+    .inbox-invitation-details{display:grid;gap:3px;flex:1;min-width:0}
+    .inbox-invitation-details strong{font-size:11px}.inbox-invitation-details span,.inbox-invitation-details small{color:var(--shandis-text-muted);font-size:9px}
+    .inbox-actions{display:flex;align-items:center;gap:8px}.inbox-actions .shandis-btn{padding:8px 13px;font-size:9px}
+    .inbox-decline{padding:7px 10px;border:1px solid var(--shandis-border);border-radius:8px;background:transparent;color:var(--shandis-text-muted);font-size:9px;font-weight:800;cursor:pointer}
+    .inbox-feedback,.inbox-load-error{margin:12px 0 0;font-size:10px}.inbox-feedback.is-success{color:#39845D}.inbox-feedback.is-error,.inbox-load-error{color:#C34D55}
     .shared-memory-card{overflow:hidden;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:16px;transition:transform .15s}
     .shared-memory-card:hover{transform:translateY(-3px)}
     .shared-cover{height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;color:#49342E;text-align:center}
@@ -68,6 +132,7 @@
     .loading-pulse{width:25px;height:25px;border:3px solid var(--shandis-border);border-top-color:var(--shandis-primary);border-radius:50%;animation:spin .8s linear infinite}
     @@keyframes spin{to{transform:rotate(360deg)}}
     @@media(max-width:850px){.shared-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @@media(max-width:650px){.invitation-inbox{padding:16px}.inbox-invitation{align-items:flex-start;flex-wrap:wrap}.inbox-actions{width:100%;padding-left:54px}.inbox-actions .shandis-btn{flex:1}}
     @@media(max-width:520px){.shared-grid{grid-template-columns:1fr}.shared-cover{height:150px}}
 </style>
 
@@ -75,6 +140,11 @@
     private List<Shandis.Web.Models.SharedMemoryItem> memories = [];
     private bool isLoading = true;
     private string? errorMessage;
+    private List<Shandis.Web.Models.InvitationItem> receivedInvitations = [];
+    private string? invitationError;
+    private string? invitationMessage;
+    private bool invitationIsError;
+    private readonly HashSet<Guid> busyInvitationIds = [];
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -94,6 +164,17 @@
         {
             var result = await ApiClient.GetSharedMemoriesAsync();
             memories = result.Items;
+
+            try
+            {
+                var invitations = await ApiClient.GetReceivedInvitationsAsync();
+                receivedInvitations = invitations.Items;
+                invitationError = null;
+            }
+            catch (Exception)
+            {
+                invitationError = "Invitations couldn't be loaded right now.";
+            }
         }
         catch (Exception)
         {
@@ -103,6 +184,54 @@
         {
             isLoading = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task AcceptAsync(Guid invitationId)
+    {
+        if (!busyInvitationIds.Add(invitationId))
+            return;
+
+        invitationMessage = null;
+        invitationIsError = false;
+        try
+        {
+            await ApiClient.AcceptInvitationAsync(invitationId);
+            invitationMessage = "Invitation accepted. The Memory has been added to Shared with Me.";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            invitationMessage = ex.Message;
+            invitationIsError = true;
+        }
+        finally
+        {
+            busyInvitationIds.Remove(invitationId);
+        }
+    }
+
+    private async Task DeclineAsync(Guid invitationId)
+    {
+        if (!busyInvitationIds.Add(invitationId))
+            return;
+
+        invitationMessage = null;
+        invitationIsError = false;
+        try
+        {
+            await ApiClient.DeclineInvitationAsync(invitationId);
+            invitationMessage = "Invitation declined.";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            invitationMessage = ex.Message;
+            invitationIsError = true;
+        }
+        finally
+        {
+            busyInvitationIds.Remove(invitationId);
         }
     }
 }
