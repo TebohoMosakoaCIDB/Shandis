@@ -141,7 +141,8 @@ public class MomentService : IMomentService
                 cancellationToken);
         }
 
-        else if (moment.Status == MomentStatus.Published)
+        else if (moment.Status == MomentStatus.Published &&
+                 memory.Status is MemoryStatus.Published or MemoryStatus.Completed)
         {
             await NotifyMemoryParticipantsAsync(
                 memory.Id,
