@@ -530,7 +530,7 @@
                 return false;
 
             // The owner can add Moments to Draft, Published and Completed Memories.
-            if (memory.MyRole == 1 || memory.OwnerId == AuthService.CurrentUserId)
+            if (memory.MyRole == 1)
                 return true;
 
             // A Viewer is always read-only, regardless of the public contribution policy.
