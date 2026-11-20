@@ -27,7 +27,7 @@
                 <span class="profile-art-label">ONE EXPERIENCE. MANY PERSPECTIVES.</span>
             </div>
             <div class="memory-profile-content">
-                <div class="memory-profile-avatar">@Initials(memory.Title)</div>
+                <div class="memory-profile-avatar">@Initials(memory?.Title ?? "Shandis")</div>
                 <div class="memory-profile-main">
                     <div class="memory-profile-kicker">
                         <span>@(memory.Visibility == 2 ? "PRIVATE MEMORY" : "PUBLIC MEMORY")</span>
@@ -184,7 +184,7 @@
                 <div class="gallery-grid">
                     @foreach (var item in FilteredGalleryItems)
                     {
-                        <button class="gallery-tile" @key="item.Media.Id" @onclick="() => OpenGallery(item)" aria-label="View media from @item.Moment.Title">
+                        <div class="gallery-tile" role="button" tabindex="0" @key="item.Media.Id" @onclick="() => OpenGallery(item)" aria-label="View media from @item.Moment.Title">
                             @if (item.IsVideo)
                             {
                                 <video src="@item.Media.Url" muted preload="metadata" playsinline></video>
@@ -202,7 +202,7 @@
                                 <span>◯ @item.Moment.CommentCount</span>
                                 <span>↗ View</span>
                             </span>
-                        </button>
+                        </div>
                     }
                 </div>
             }
