@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Shandis.Api.Contracts.Profiles;
+using Shandis.Application.Abstractions.Persistence;
 using Shandis.Infrastructure.Identity;
 
 namespace Shandis.Api.Controllers;
@@ -20,10 +21,14 @@ public class ProfileController : ControllerBase
     ];
 
     private readonly UserManager<ShandisUser> _userManager;
+    private readonly IFollowRepository _followRepository;
 
-    public ProfileController(UserManager<ShandisUser> userManager)
+    public ProfileController(
+        UserManager<ShandisUser> userManager,
+        IFollowRepository followRepository)
     {
         _userManager = userManager;
+        _followRepository = followRepository;
     }
 
     [HttpGet("me")]
@@ -34,7 +39,7 @@ public class ProfileController : ControllerBase
         if (user == null)
             return Unauthorized();
 
-        return Ok(MapProfile(user));
+        return Ok(await MapProfileAsync(user, user.Id));
     }
 
     [HttpGet("search")]
@@ -84,7 +89,11 @@ public class ProfileController : ControllerBase
         if (user is null || !user.IsActive)
             return NotFound();
 
-        return Ok(MapProfile(user));
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser is null)
+            return Unauthorized();
+
+        return Ok(await MapProfileAsync(user, currentUser.Id));
     }
 
     [HttpPut("me")]
@@ -128,11 +137,13 @@ public class ProfileController : ControllerBase
             });
         }
 
-        return Ok(MapProfile(user));
+        return Ok(await MapProfileAsync(user, user.Id));
     }
 
-    private static UserProfileResponse MapProfile(ShandisUser user)
+    private async Task<UserProfileResponse> MapProfileAsync(ShandisUser user, Guid currentUserId)
     {
+        var isCurrentUser = user.Id == currentUserId;
+
         return new UserProfileResponse
         {
             Id = user.Id,
@@ -140,10 +151,14 @@ public class ProfileController : ControllerBase
             FirstName = user.FirstName,
             LastName = user.LastName,
             DisplayName = user.DisplayName ?? string.Empty,
-            Email = user.Email ?? string.Empty,
+            Email = isCurrentUser ? user.Email ?? string.Empty : string.Empty,
             ProfilePictureUrl = user.ProfilePictureUrl,
             Bio = user.Bio,
-            CreatedAtUtc = user.CreatedAtUtc
+            CreatedAtUtc = user.CreatedAtUtc,
+            FollowerCount = await _followRepository.GetFollowerCountAsync(user.Id),
+            FollowingCount = await _followRepository.GetFollowingCountAsync(user.Id),
+            IsFollowing = !isCurrentUser && await _followRepository.IsFollowingAsync(currentUserId, user.Id),
+            IsCurrentUser = isCurrentUser
         };
     }
 }
