@@ -52,7 +52,7 @@
                             <span class="notification-item-icon">@GetIcon(item.Type)</span>
                             <span class="notification-item-content">
                                 <strong>@item.Title</strong>
-                                <span>@item.Message</span>
+                                <span>@GetMessage(item)</span>
                                 <small>@FormatAge(item.CreatedAtUtc)</small>
                             </span>
                             @if (!item.IsRead)
@@ -200,8 +200,23 @@
         6 => "×",
         7 => "♡",
         8 => "☰",
+        10 => "♡",
         _ => "•"
     };
+
+    private static string GetMessage(Shandis.Web.Models.NotificationItem item)
+    {
+        if (item.Type == 10)
+        {
+            var followerName = string.IsNullOrWhiteSpace(item.ActorName)
+                ? "Someone"
+                : item.ActorName;
+
+            return $"{followerName} started following you.";
+        }
+
+        return item.Message;
+    }
 
     private static string FormatAge(DateTime createdAtUtc)
     {
