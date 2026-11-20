@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Shandis.Application.Abstractions.Persistence;
+using Shandis.Application.Features.Follows;
 using Shandis.Domain.Entities;
+using Shandis.Infrastructure.Identity;
 
 namespace Shandis.Infrastructure.Persistence.Repositories;
 
@@ -16,14 +18,11 @@ public sealed class FollowRepository(IDbContextFactory<ShandisDbContext> context
 
         var followedUserIsActive = await dbContext.Users
             .AsNoTracking()
-            .AnyAsync(
-                user => user.Id == followedUserId && user.IsActive,
-                cancellationToken);
+            .AnyAsync(user => user.Id == followedUserId && user.IsActive, cancellationToken);
 
         if (!followedUserIsActive)
             return false;
 
-        // A block in either direction prevents a follow relationship.
         var isBlocked = await dbContext.UserBlocks
             .AsNoTracking()
             .AnyAsync(
@@ -58,8 +57,7 @@ public sealed class FollowRepository(IDbContextFactory<ShandisDbContext> context
         return await dbContext.UserFollows
             .AsNoTracking()
             .AnyAsync(
-                follow => follow.FollowerId == followerId &&
-                          follow.FollowedUserId == followedUserId,
+                follow => follow.FollowerId == followerId && follow.FollowedUserId == followedUserId,
                 cancellationToken);
     }
 
@@ -70,8 +68,6 @@ public sealed class FollowRepository(IDbContextFactory<ShandisDbContext> context
     {
         await using var dbContext = await contextFactory.CreateDbContextAsync(cancellationToken);
 
-        // PostgreSQL's unique index makes this operation safe for duplicate requests,
-        // including requests that arrive concurrently.
         var now = DateTime.UtcNow;
         var followId = Guid.NewGuid();
 
@@ -94,11 +90,81 @@ public sealed class FollowRepository(IDbContextFactory<ShandisDbContext> context
         await using var dbContext = await contextFactory.CreateDbContextAsync(cancellationToken);
 
         var affectedRows = await dbContext.UserFollows
-            .Where(follow =>
-                follow.FollowerId == followerId &&
-                follow.FollowedUserId == followedUserId)
+            .Where(follow => follow.FollowerId == followerId && follow.FollowedUserId == followedUserId)
             .ExecuteDeleteAsync(cancellationToken);
 
         return affectedRows > 0;
+    }
+
+    public Task<FollowUsersResult> GetFollowersAsync(
+        Guid userId,
+        Guid currentUserId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        return GetUsersAsync(userId, currentUserId, page, pageSize, followers: true, cancellationToken);
+    }
+
+    public Task<FollowUsersResult> GetFollowingAsync(
+        Guid userId,
+        Guid currentUserId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        return GetUsersAsync(userId, currentUserId, page, pageSize, followers: false, cancellationToken);
+    }
+
+    private async Task<FollowUsersResult> GetUsersAsync(
+        Guid userId,
+        Guid currentUserId,
+        int page,
+        int pageSize,
+        bool followers,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await contextFactory.CreateDbContextAsync(cancellationToken);
+
+        IQueryable<ShandisUser> users = followers
+            ? dbContext.UserFollows
+                .AsNoTracking()
+                .Where(follow => follow.FollowedUserId == userId)
+                .Join(dbContext.Users, follow => follow.FollowerId, user => user.Id, (_, user) => user)
+            : dbContext.UserFollows
+                .AsNoTracking()
+                .Where(follow => follow.FollowerId == userId)
+                .Join(dbContext.Users, follow => follow.FollowedUserId, user => user.Id, (_, user) => user);
+
+        users = users.Where(user => user.IsActive);
+
+        var totalCount = await users.CountAsync(cancellationToken);
+
+        var items = await users
+            .OrderBy(user => user.DisplayName ?? user.UserName)
+            .ThenBy(user => user.UserName)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(user => new FollowUserItem
+            {
+                Id = user.Id,
+                UserName = user.UserName ?? string.Empty,
+                DisplayName = user.DisplayName ?? user.UserName ?? string.Empty,
+                ProfilePictureUrl = user.ProfilePictureUrl,
+                IsFollowing = dbContext.UserFollows.Any(
+                    follow => follow.FollowerId == currentUserId &&
+                              follow.FollowedUserId == user.Id)
+            })
+            .ToListAsync(cancellationToken);
+
+        return new FollowUsersResult
+        {
+            UserId = userId,
+            Relationship = followers ? "Followers" : "Following",
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            Users = items
+        };
     }
 }
