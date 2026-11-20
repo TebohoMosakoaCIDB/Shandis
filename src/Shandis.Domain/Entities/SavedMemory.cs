@@ -7,6 +7,8 @@ public class SavedMemory : Entity
     public Guid UserId { get; private set; }
     public Guid MemoryId { get; private set; }
 
+    public Memory Memory { get; private set; } = null!;
+
     private SavedMemory() { }
 
     public SavedMemory(Guid userId, Guid memoryId)
