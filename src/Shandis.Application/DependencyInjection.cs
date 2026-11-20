@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Shandis.Application.Features.Invitations;
+using Shandis.Application.Features.Follows;
 using Shandis.Application.Features.Memories;
 using Shandis.Application.Features.Moments;
 using Shandis.Application.Features.Notifications;
@@ -15,6 +16,7 @@ namespace Shandis.Application
             services.AddScoped<IInvitationService, InvitationService>();
             services.AddScoped<IMomentService, MomentService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IFollowService, FollowService>();
 
             return services;
         }
