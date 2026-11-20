@@ -68,12 +68,11 @@ public sealed class FollowService(
         if (followerId == followedUserId)
             throw new InvalidOperationException("You cannot unfollow yourself.");
 
-        var canFollow = await followRepository.CanFollowAsync(
-            followerId,
+        var followedUserName = await followRepository.GetActiveUserNameAsync(
             followedUserId,
             cancellationToken);
 
-        if (!canFollow)
+        if (string.IsNullOrWhiteSpace(followedUserName))
             throw new KeyNotFoundException("This Shandis member could not be found.");
 
         await followRepository.RemoveFollowAsync(
