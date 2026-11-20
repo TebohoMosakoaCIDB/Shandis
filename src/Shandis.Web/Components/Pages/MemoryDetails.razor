@@ -107,7 +107,7 @@
                 <form class="invitation-form" @onsubmit="SendInvitationAsync" @onsubmit:preventDefault>
                     <label>
                         <span>Username or email address</span>
-                        <input type="text" @bind="inviteIdentifier" maxlength="320" placeholder="@@username or friend@example.com" required />
+                        <input type="text" @bind="inviteIdentifier" maxlength="320" placeholder="username or friend@example.com" required />
                     </label>
                     <label>
                         <span>Access</span>
@@ -153,7 +153,7 @@
                 {
                     <p class="invitation-feedback is-error">@invitationLoadError</p>
                 }
-                <p class="invitation-note">Enter a registered member's @@username or an email address for someone who has not joined Shandis. If an invitation already exists, its role and status are updated instead of creating another record. The member must accept again; their existing Moments and comments are retained. Email delivery for new members still needs to be configured. Invitations expire after 7 days.</p>
+                <p class="invitation-note">Enter a registered member's username, with or without the leading @, or an email address for someone who has not joined Shandis. If an invitation already exists, its role and status are updated instead of creating another record. The member must accept again; their existing Moments and comments are retained. Email delivery for new members still needs to be configured. Invitations expire after 7 days.</p>
             </section>
         }
 
@@ -822,7 +822,9 @@
 
         try
         {
-            var invitedByUserName = inviteIdentifier.TrimStart().StartsWith("@", StringComparison.Ordinal);
+            var enteredInvitee = inviteIdentifier.Trim();
+            var invitedByUserName = enteredInvitee.StartsWith("@", StringComparison.Ordinal)
+                || !enteredInvitee.Contains("@", StringComparison.Ordinal);
             await ApiClient.CreateInvitationAsync(MemoryId, inviteIdentifier.Trim(), inviteRole);
             inviteIdentifier = string.Empty;
             memoryInvitations = await ApiClient.GetMemoryInvitationsAsync(MemoryId);
