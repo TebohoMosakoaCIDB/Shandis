@@ -1,0 +1,92 @@
+@page "/saved"
+@inject Shandis.Web.Services.ShandisAuthService AuthService
+@inject Shandis.Web.Services.ShandisApiClient ApiClient
+
+<PageTitle>Saved Memories · Shandis</PageTitle>
+
+<div class="saved-page">
+    <header class="saved-heading">
+        <div><p class="eyebrow">KEEP THE MOMENTS CLOSE</p><h1>Saved Memories</h1><p>Memories you've bookmarked to revisit whenever you like.</p></div>
+    </header>
+
+    @if (loading)
+    {
+        <div class="saved-state">Loading your saved Memories…</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(error))
+    {
+        <div class="saved-state"><h2>We couldn't load your saved Memories</h2><p>@error</p><button class="shandis-btn shandis-btn-secondary" @onclick="LoadAsync">Try again</button></div>
+    }
+    else if (items.Count == 0)
+    {
+        <div class="saved-state"><span class="saved-symbol">♡</span><h2>Save a Memory for later.</h2><p>When you find a public or shared Memory you want to revisit, select Save. It will appear here.</p><a class="shandis-btn shandis-btn-primary" href="/">Explore Memories</a></div>
+    }
+    else
+    {
+        <div class="saved-count">@totalCount @(totalCount == 1 ? "saved Memory" : "saved Memories")</div>
+        <div class="saved-grid">
+            @foreach (var item in items)
+            {
+                <article class="saved-card" @key="item.Id">
+                    <a class="saved-cover" href="@($"/memories/{item.Id}")"><span>✳</span><strong>@item.Title</strong><small>SHANDIS MEMORY</small></a>
+                    <div class="saved-card-body">
+                        <div class="saved-meta"><span>@(item.CategoryName ?? "Memory")</span><span>@(item.Visibility == 2 ? "PRIVATE" : "PUBLIC")</span></div>
+                        <p>@(item.PlaceName ?? "Location not set") · @(item.StartDateUtc?.ToLocalTime().ToString("d MMM yyyy") ?? "Date not set")</p>
+                        @if (!string.IsNullOrWhiteSpace(item.Description)) { <div class="saved-description">@item.Description</div> }
+                        <div class="saved-actions"><span>Saved @item.SavedAtUtc.ToLocalTime().ToString("d MMM yyyy")</span><button class="text-button" disabled="@removing.Contains(item.Id)" @onclick="() => RemoveAsync(item.Id)">@(removing.Contains(item.Id) ? "Removing…" : "Remove")</button></div>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+</div>
+
+<style>
+.saved-page{max-width:1040px;margin:0 auto;padding:8px 0 60px}.saved-heading{margin-bottom:26px}.eyebrow{margin:0 0 7px;color:var(--shandis-primary);font-size:9px;font-weight:850;letter-spacing:.15em}.saved-heading h1{margin:0;font:850 clamp(28px,4vw,38px) Manrope,sans-serif;letter-spacing:-.045em}.saved-heading p:last-child{color:var(--shandis-text-muted);font-size:12px}.saved-count{margin-bottom:13px;color:var(--shandis-text-muted);font-size:10px}.saved-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px}.saved-card{overflow:hidden;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:16px}.saved-cover{height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:20px;text-align:center;color:#49342e;background:linear-gradient(135deg,#e9b8a7,#f4d8c2 52%,#c6d6c6)}.saved-cover span{font-size:28px}.saved-cover strong{font:850 21px/1.15 Manrope,sans-serif}.saved-cover small{font-size:8px;font-weight:900;letter-spacing:.2em}.saved-card-body{padding:14px}.saved-meta,.saved-actions{display:flex;justify-content:space-between;gap:8px;color:var(--shandis-text-muted);font-size:9px}.saved-meta span:first-child{color:var(--shandis-primary);font-weight:800}.saved-card-body>p{font-size:10px;color:var(--shandis-text-muted)}.saved-description{font-size:10px;color:var(--shandis-text-muted);line-height:1.5}.saved-actions{align-items:center;margin-top:13px;padding-top:10px;border-top:1px solid var(--shandis-border)}.text-button{border:0;background:none;color:var(--shandis-primary);font-weight:800;cursor:pointer}.saved-state{min-height:250px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:17px;text-align:center}.saved-state h2{margin:10px 0 3px}.saved-state p{max-width:420px;color:var(--shandis-text-muted);font-size:11px;line-height:1.7}.saved-symbol{font-size:40px;color:var(--shandis-primary)}@@media(max-width:850px){.saved-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@@media(max-width:540px){.saved-grid{grid-template-columns:1fr}}
+</style>
+
+@code {
+    private List<Shandis.Web.Models.SavedMemoryItem> items = [];
+    private readonly HashSet<Guid> removing = [];
+    private bool loading = true;
+    private string? error;
+    private int totalCount;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await AuthService.InitializeAsync();
+            await LoadAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true; error = null;
+        try
+        {
+            var result = await ApiClient.GetSavedMemoriesAsync();
+            items = result.Items; totalCount = result.TotalCount;
+        }
+        catch (Exception)
+        {
+            error = "Please check your connection and sign-in status, then try again.";
+        }
+        finally { loading = false; StateHasChanged(); }
+    }
+
+    private async Task RemoveAsync(Guid memoryId)
+    {
+        if (!removing.Add(memoryId)) return;
+        try
+        {
+            await ApiClient.UnsaveMemoryAsync(memoryId);
+            items.RemoveAll(x => x.Id == memoryId);
+            totalCount--;
+        }
+        catch { error = "That Memory couldn't be removed. Please try again."; }
+        finally { removing.Remove(memoryId); }
+    }
+}
