@@ -83,27 +83,40 @@ public sealed class ShandisAuthService
         return (false, await ReadErrorAsync(response));
     }
 
+
     public async Task InitializeAsync()
     {
         if (isInitialized)
             return;
 
-        var accessToken = await js.InvokeAsync<string?>("shandisAuth.get", AccessTokenKey);
-        CurrentUserEmail = await js.InvokeAsync<string?>("shandisAuth.get", UserEmailKey);
-        refreshToken = await js.InvokeAsync<string?>("shandisAuth.get", RefreshTokenKey);
+        var accessToken = await js.InvokeAsync<string?>(
+            "shandisAuth.get", AccessTokenKey);
 
-        var expiresAt = await js.InvokeAsync<string?>("shandisAuth.get", AccessTokenExpiresAtKey);
+        CurrentUserEmail = await js.InvokeAsync<string?>(
+            "shandisAuth.get", UserEmailKey);
+
+        refreshToken = await js.InvokeAsync<string?>(
+            "shandisAuth.get", RefreshTokenKey);
+
+        var expiresAt = await js.InvokeAsync<string?>(
+            "shandisAuth.get", AccessTokenExpiresAtKey);
+
         if (DateTimeOffset.TryParse(expiresAt, out var parsedExpiry))
             accessTokenExpiresAt = parsedExpiry;
+        else
+            accessTokenExpiresAt = null;
 
         if (!string.IsNullOrWhiteSpace(accessToken))
-        {
             apiClient.SetAccessToken(accessToken);
-            IsAuthenticated = true;
-        }
+
+        // A refresh token is sufficient to attempt session renewal.
+        IsAuthenticated =
+            !string.IsNullOrWhiteSpace(accessToken) ||
+            !string.IsNullOrWhiteSpace(refreshToken);
 
         isInitialized = true;
     }
+
 
     public async Task LogoutAsync()
     {
