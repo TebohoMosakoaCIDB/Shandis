@@ -21,6 +21,7 @@
                     <h3>Notifications</h3>
                     <span>@(unreadCount == 0 ? "You're all caught up" : $"{unreadCount} unread")</span>
                 </div>
+                <a class="notification-view-all" href="/notifications" @onclick="ClosePanel">View all</a>
                 @if (unreadCount > 0)
                 {
                     <button type="button" class="notification-mark-all" @onclick="MarkAllReadAsync">
@@ -123,6 +124,11 @@
         }
 
         refreshCancellation.Dispose();
+    }
+
+    private void ClosePanel()
+    {
+        isOpen = false;
     }
 
     private async Task ToggleAsync()
