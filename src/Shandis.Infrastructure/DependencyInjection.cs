@@ -22,6 +22,7 @@ namespace Shandis.Infrastructure
             services.AddScoped<IMomentRepository, MomentRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<IFollowRepository, FollowRepository>();
+            services.AddScoped<ISavedMemoryRepository, SavedMemoryRepository>();
 
             services.AddOptions<SupabaseStorageOptions>()
                 .Bind(configuration.GetSection(SupabaseStorageOptions.SectionName))
