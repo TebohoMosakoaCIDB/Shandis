@@ -21,6 +21,7 @@ namespace Shandis.Infrastructure
             services.AddScoped<IEmailService, LoggingEmailService>();
             services.AddScoped<IMomentRepository, MomentRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<IFollowRepository, FollowRepository>();
 
             services.AddOptions<SupabaseStorageOptions>()
                 .Bind(configuration.GetSection(SupabaseStorageOptions.SectionName))
