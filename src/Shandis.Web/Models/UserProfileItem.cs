@@ -11,4 +11,8 @@ public sealed class UserProfileItem
     public string? ProfilePictureUrl { get; set; }
     public string? Bio { get; set; }
     public DateTime CreatedAtUtc { get; set; }
+    public int FollowerCount { get; set; }
+    public int FollowingCount { get; set; }
+    public bool IsFollowing { get; set; }
+    public bool IsCurrentUser { get; set; }
 }
