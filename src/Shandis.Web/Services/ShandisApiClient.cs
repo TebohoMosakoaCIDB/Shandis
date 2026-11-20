@@ -81,6 +81,40 @@ public sealed class ShandisApiClient(HttpClient httpClient)
         return await response.Content.ReadFromJsonAsync<UserProfileItem>(cancellationToken: cancellationToken);
     }
 
+    public async Task<FollowRelationshipItem> FollowUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.PostAsync($"api/follows/{userId}", null, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<FollowRelationshipItem>(cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException("The Shandis API returned an empty follow response.");
+    }
+
+    public async Task<FollowRelationshipItem> UnfollowUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.DeleteAsync($"api/follows/{userId}", cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<FollowRelationshipItem>(cancellationToken: cancellationToken)
+            ?? throw new InvalidOperationException("The Shandis API returned an empty unfollow response.");
+    }
+
+    public Task<FollowUsersResponse> GetFollowersAsync(
+        Guid userId, int page = 1, int pageSize = 20,
+        CancellationToken cancellationToken = default)
+        => GetRequiredAsync<FollowUsersResponse>(
+            $"api/follows/{userId}/followers?page={page}&pageSize={pageSize}", cancellationToken);
+
+    public Task<FollowUsersResponse> GetFollowingAsync(
+        Guid userId, int page = 1, int pageSize = 20,
+        CancellationToken cancellationToken = default)
+        => GetRequiredAsync<FollowUsersResponse>(
+            $"api/follows/{userId}/following?page={page}&pageSize={pageSize}", cancellationToken);
+
     public async Task<CreatedMemoryResponse> CreateMemoryAsync(
         CreateMemoryRequest request,
         CancellationToken cancellationToken = default)
