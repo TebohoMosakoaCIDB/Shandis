@@ -140,6 +140,29 @@ public sealed class ShandisApiClient(HttpClient httpClient)
         await EnsureSuccessAsync(response, cancellationToken);
     }
 
+    public Task<SavedMemoriesResponse> GetSavedMemoriesAsync(int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+        => GetRequiredAsync<SavedMemoriesResponse>($"api/saved-memories?page={page}&pageSize={pageSize}", cancellationToken);
+
+    public async Task<bool> IsMemorySavedAsync(Guid memoryId, CancellationToken cancellationToken = default)
+    {
+        var status = await GetRequiredAsync<SavedMemoryStatus>($"api/saved-memories/{memoryId}/status", cancellationToken);
+        return status.IsSaved;
+    }
+
+    public async Task SaveMemoryAsync(Guid memoryId, CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.PostAsync($"api/saved-memories/{memoryId}", null, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public async Task UnsaveMemoryAsync(Guid memoryId, CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.DeleteAsync($"api/saved-memories/{memoryId}", cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
     public async Task<MyMemoriesResponse> GetMyMemoriesAsync(
         int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
         => await GetRequiredAsync<MyMemoriesResponse>(
