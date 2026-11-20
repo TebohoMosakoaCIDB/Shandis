@@ -17,6 +17,7 @@ namespace Shandis.Application
             services.AddScoped<IMomentService, MomentService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IFollowService, FollowService>();
+            services.AddScoped<ISavedMemoryService, SavedMemoryService>();
 
             return services;
         }
