@@ -6,13 +6,37 @@
 
 <div class="follow-list-currentPage">
     <a class="back-link" href="@($"/u/{Uri.EscapeDataString(UserName)}")">← Back to profile</a>
-    <header>
-        <h1>@(IsFollowers ? "Followers" : "Following")</h1>
-        @if (result is not null)
-        {
-            <span>@result.TotalCount</span>
-        }
-    </header>
+
+    @if (viewedProfile is not null)
+    {
+        <section class="profile-context">
+            @if (!string.IsNullOrWhiteSpace(viewedProfile.ProfilePictureUrl))
+            {
+                <img class="profile-avatar" src="@viewedProfile.ProfilePictureUrl" alt="@($"{GetDisplayName(viewedProfile)} profile picture")" />
+            }
+            else
+            {
+                <span class="profile-avatar profile-avatar-fallback">@GetInitials(GetDisplayName(viewedProfile))</span>
+            }
+            <div class="profile-identity">
+                <span class="eyebrow">@(IsFollowers ? "Followers of" : "Following")</span>
+                <h1>@GetDisplayName(viewedProfile)</h1>
+                <span class="profile-username">@@@viewedProfile.UserName</span>
+                @if (!string.IsNullOrWhiteSpace(viewedProfile.Bio))
+                {
+                    <p>@viewedProfile.Bio</p>
+                }
+            </div>
+        </section>
+
+        <header class="list-heading">
+            <h2>@(IsFollowers ? "Followers" : "Following")</h2>
+            @if (result is not null)
+            {
+                <span>@result.TotalCount</span>
+            }
+        </header>
+    }
 
     @if (isLoading)
     {
@@ -24,7 +48,7 @@
     }
     else if (result is null || result.Users.Count == 0)
     {
-        <div class="state">No members to show yet.</div>
+        <div class="state">@(IsFollowers ? "No one follows this member yet." : "This member isn't following anyone yet.")</div>
     }
     else
     {
@@ -62,9 +86,17 @@
 <style>
     .follow-list-currentPage{max-width:680px;margin:0 auto;padding:25px 0 60px;color:var(--shandis-text)}
     .back-link{color:var(--shandis-primary);font-size:11px;font-weight:800;text-decoration:none}
-    header{display:flex;align-items:center;gap:12px;margin:22px 0 17px}
-    header h1{margin:0;font:850 27px Manrope,sans-serif;letter-spacing:-.04em}
-    header span{padding:4px 9px;border-radius:20px;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:10px;font-weight:800}
+    .profile-context{display:flex;align-items:center;gap:17px;margin:23px 0 25px;padding:20px;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:17px}
+    .profile-avatar{width:76px;height:76px;flex:0 0 76px;border-radius:50%;object-fit:cover}
+    .profile-avatar-fallback{display:grid;place-items:center;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:22px;font-weight:850}
+    .profile-identity{min-width:0}
+    .eyebrow{display:block;margin-bottom:4px;color:var(--shandis-text-muted);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.09em}
+    .profile-identity h1{margin:0;font:850 23px Manrope,sans-serif;letter-spacing:-.04em}
+    .profile-username{display:block;margin-top:3px;color:var(--shandis-text-muted);font-size:11px}
+    .profile-identity p{margin:9px 0 0;font-size:12px;line-height:1.5}
+    .list-heading{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+    .list-heading h2{margin:0;font:800 17px Manrope,sans-serif}
+    .list-heading span{padding:4px 9px;border-radius:20px;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:10px;font-weight:800}
     .member-list{overflow:hidden;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:15px}
     .member-row{display:flex;align-items:center;gap:12px;padding:13px 16px;color:inherit;text-decoration:none;border-bottom:1px solid var(--shandis-border)}
     .member-row:last-child{border-bottom:0}
@@ -77,12 +109,14 @@
     .pagination{display:flex;justify-content:center;align-items:center;gap:16px;margin-top:18px;font-size:10px}
     .pagination button{padding:8px 13px;border:1px solid var(--shandis-border);border-radius:8px;background:var(--shandis-surface);color:var(--shandis-text);font-weight:700}
     .pagination button:disabled{opacity:.4}
+    @@media(max-width:600px){.follow-list-currentPage{padding-top:18px}.profile-context{gap:13px;padding:15px}.profile-avatar{width:62px;height:62px;flex-basis:62px}.profile-identity h1{font-size:19px}}
 </style>
 
 @code {
     [Parameter] public string UserName { get; set; } = string.Empty;
     [Parameter] public string Relationship { get; set; } = string.Empty;
 
+    private UserProfileItem? viewedProfile;
     private FollowUsersResponse? result;
     private int currentPage = 1;
     private bool isLoading = true;
@@ -116,19 +150,19 @@
         errorMessage = null;
         try
         {
-            var profile = await ApiClient.GetUserProfileAsync(UserName);
-            if (profile is null)
+            viewedProfile = await ApiClient.GetUserProfileAsync(UserName);
+            if (viewedProfile is null)
             {
                 errorMessage = "We couldn't find that member.";
                 result = null;
             }
             else if (IsFollowers)
             {
-                result = await ApiClient.GetFollowersAsync(profile.Id, currentPage);
+                result = await ApiClient.GetFollowersAsync(viewedProfile.Id, currentPage);
             }
             else if (string.Equals(Relationship, "following", StringComparison.OrdinalIgnoreCase))
             {
-                result = await ApiClient.GetFollowingAsync(profile.Id, currentPage);
+                result = await ApiClient.GetFollowingAsync(viewedProfile.Id, currentPage);
             }
             else
             {
@@ -162,9 +196,14 @@
         await LoadAsync();
     }
 
-    private static string GetInitials(string name)
+    private static string GetDisplayName(UserProfileItem profile)
+        => !string.IsNullOrWhiteSpace(profile.DisplayName)
+            ? profile.DisplayName
+            : profile.UserName;
+
+    private static string GetInitials(string? name)
     {
-        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var parts = (name ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length > 1)
             return $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
 
