@@ -33,7 +33,7 @@
                         <div class="saved-meta"><span>@(item.CategoryName ?? "Memory")</span><span>@(item.Visibility == 2 ? "PRIVATE" : "PUBLIC")</span></div>
                         <p>@(item.PlaceName ?? "Location not set") · @(item.StartDateUtc?.ToLocalTime().ToString("d MMM yyyy") ?? "Date not set")</p>
                         @if (!string.IsNullOrWhiteSpace(item.Description)) { <div class="saved-description">@item.Description</div> }
-                        <div class="saved-actions"><span>Saved @item.SavedAtUtc.ToLocalTime().ToString("d MMM yyyy")</span><button class="text-button" disabled="@removing.Contains(item.Id)" @onclick="() => RemoveAsync(item.Id)">@(removing.Contains(item.Id) ? "Removing…" : "Remove")</button></div>
+                        <div class="saved-actions"><span>In your saved collection</span><button class="text-button" disabled="@removing.Contains(item.Id)" @onclick="() => RemoveAsync(item.Id)">@(removing.Contains(item.Id) ? "Removing…" : "Remove")</button></div>
                     </div>
                 </article>
             }
