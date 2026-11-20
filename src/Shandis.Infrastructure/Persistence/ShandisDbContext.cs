@@ -39,6 +39,8 @@ public class ShandisDbContext
 
     public DbSet<UserFollow> UserFollows => Set<UserFollow>();
 
+    public DbSet<SavedMemory> SavedMemories => Set<SavedMemory>();
+
     public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
 
     public DbSet<Conversation> Conversations => Set<Conversation>();
