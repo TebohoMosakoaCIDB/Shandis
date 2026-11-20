@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Shandis.Application;
+using Shandis.Api.Endpoints;
 using Shandis.Infrastructure;
 using Shandis.Infrastructure.Identity;
 using Shandis.Infrastructure.Persistence;
@@ -90,35 +91,6 @@ await using (var scope = app.Services.CreateAsyncScope())
             userManager,
             testPassword);
 
-        // Temporary sign-in diagnostic for the owner test account.
-        // This checks Identity's sign-in rules without issuing an auth token.
-        var owner = await userManager.FindByEmailAsync(
-            "owner@shandis.local");
-
-        if (owner is not null)
-        {
-            var signInManager = scope.ServiceProvider
-                .GetRequiredService<SignInManager<ShandisUser>>();
-
-            var signInResult = await signInManager.CheckPasswordSignInAsync(
-                owner,
-                testPassword,
-                lockoutOnFailure: false);
-
-            app.Logger.LogInformation(
-                "Owner sign-in diagnostic: Succeeded={Succeeded}, " +
-                "IsNotAllowed={IsNotAllowed}, IsLockedOut={IsLockedOut}, " +
-                "RequiresTwoFactor={RequiresTwoFactor}",
-                signInResult.Succeeded,
-                signInResult.IsNotAllowed,
-                signInResult.IsLockedOut,
-                signInResult.RequiresTwoFactor);
-        }
-        else
-        {
-            app.Logger.LogWarning(
-                "Owner sign-in diagnostic: owner@shandis.local was not found.");
-        }
     }
 }
 
@@ -145,6 +117,8 @@ app.UseAuthorization();
 
 app.MapGroup("/api/auth")
     .MapIdentityApi<ShandisUser>();
+
+app.MapShandisAuthenticationEndpoints();
 
 app.MapControllers();
 
