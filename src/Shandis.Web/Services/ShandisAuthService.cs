@@ -29,13 +29,13 @@ public sealed class ShandisAuthService
     }
 
     public async Task<(bool Success, string? Error)> LoginAsync(
-        string email,
+        string identifier,
         string password,
         CancellationToken cancellationToken = default)
     {
         using var response = await apiClient.HttpClient.PostAsJsonAsync(
-            "api/auth/login?useCookies=false&useSessionCookies=false",
-            new { email, password },
+            "api/accounts/login",
+            new { identifier, password },
             cancellationToken);
 
         var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -60,7 +60,7 @@ public sealed class ShandisAuthService
         }
 
         await StoreTokensAsync(tokens.AccessToken, tokens.RefreshToken, tokens.ExpiresIn);
-        CurrentUserEmail = email.Trim();
+        CurrentUserEmail = identifier.Trim();
         await js.InvokeVoidAsync("shandisAuth.set", UserEmailKey, CurrentUserEmail);
         isInitialized = true;
         return (true, null);
