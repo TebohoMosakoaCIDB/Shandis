@@ -47,6 +47,11 @@
                         disabled="@isUpdatingFollow" @onclick="ToggleFollowAsync">
                     @(isUpdatingFollow ? "Please wait…" : profile.IsFollowing ? "Following" : "Follow")
                 </button>
+
+                @if (!string.IsNullOrWhiteSpace(followErrorMessage))
+                {
+                    <p class="follow-error" role="alert">@followErrorMessage</p>
+                }
             }
             <p class="joined">Sharing experiences since @profile.CreatedAtUtc.ToString("MMMM yyyy")</p>
             <a class="back-to-members" href="/members">← Find more people</a>
@@ -68,6 +73,7 @@
     .follow-button{min-width:150px;margin-top:18px;padding:10px 22px;border:1px solid var(--shandis-primary);border-radius:9px;background:var(--shandis-primary);color:white;font-size:11px;font-weight:800;cursor:pointer}
     .follow-button.following{background:transparent;color:var(--shandis-primary)}
     .follow-button:disabled{opacity:.65;cursor:wait}
+    .follow-error{margin:10px 0 0;color:var(--shandis-danger,#b42318);font-size:10px}
     .joined{margin:17px 0 0;color:var(--shandis-text-muted);font-size:9px}
     .back-to-members{margin-top:23px;color:var(--shandis-primary);font-size:10px;font-weight:800;text-decoration:none}
     .profile-state{padding:50px 20px;text-align:center;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:16px;color:var(--shandis-text-muted);font-size:11px}
@@ -79,6 +85,7 @@
     private UserProfileItem? profile;
     private bool isLoading = true;
     private bool isUpdatingFollow;
+    private string? followErrorMessage;
 
     private string Initials
     {
@@ -130,20 +137,27 @@
             return;
 
         isUpdatingFollow = true;
+        followErrorMessage = null;
+
         try
         {
-            if (profile.IsFollowing)
+            var wasFollowing = profile.IsFollowing;
+            var result = wasFollowing
+                ? await ApiClient.UnfollowUserAsync(profile.Id)
+                : await ApiClient.FollowUserAsync(profile.Id);
+
+            profile.IsFollowing = result.IsFollowing;
+
+            if (wasFollowing != result.IsFollowing)
             {
-                await ApiClient.UnfollowUserAsync(profile.Id);
-                profile.IsFollowing = false;
-                profile.FollowerCount = Math.Max(0, profile.FollowerCount - 1);
+                profile.FollowerCount = Math.Max(
+                    0,
+                    profile.FollowerCount + (result.IsFollowing ? 1 : -1));
             }
-            else
-            {
-                await ApiClient.FollowUserAsync(profile.Id);
-                profile.IsFollowing = true;
-                profile.FollowerCount++;
-            }
+        }
+        catch
+        {
+            followErrorMessage = "We couldn't update this follow. Please try again.";
         }
         finally
         {
