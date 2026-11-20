@@ -53,16 +53,21 @@ public class InvitationService : IInvitationService
         string email;
         Guid? existingUserId;
 
-        if (invitee.StartsWith("@", StringComparison.Ordinal))
+        // A username may be entered with or without its leading @.
+        // Email addresses are detected separately and retain their existing flow.
+        var isUsername = invitee.StartsWith("@", StringComparison.Ordinal)
+            || !new EmailAddressAttribute().IsValid(invitee);
+
+        if (isUsername)
         {
-            var userName = invitee[1..].Trim().ToLowerInvariant();
+            var userName = invitee.TrimStart('@').Trim().ToLowerInvariant();
 
             if (userName.Length is < 3 or > 30 ||
                 userName.Any(character =>
                     !char.IsAsciiLetterOrDigit(character) && character != '_'))
             {
                 throw new ArgumentException(
-                    "Enter a valid @username using 3–30 letters, numbers or underscores.");
+                    "Enter a valid username using 3–30 letters, numbers or underscores.");
             }
 
             existingUserId =
@@ -87,9 +92,6 @@ public class InvitationService : IInvitationService
         }
         else
         {
-            if (!new EmailAddressAttribute().IsValid(invitee))
-                throw new ArgumentException("Enter a valid email address or a Shandis @username.");
-
             email = invitee.ToLowerInvariant();
             existingUserId =
                 await _invitationRepository.FindUserIdByEmailAsync(
