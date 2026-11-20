@@ -96,6 +96,30 @@ public sealed class FollowRepository(IDbContextFactory<ShandisDbContext> context
         return affectedRows > 0;
     }
 
+    public async Task<int> GetFollowerCountAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await dbContext.UserFollows
+            .AsNoTracking()
+            .Where(follow => follow.FollowedUserId == userId)
+            .Join(dbContext.Users, follow => follow.FollowerId, user => user.Id, (_, user) => user)
+            .CountAsync(user => user.IsActive, cancellationToken);
+    }
+
+    public async Task<int> GetFollowingCountAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await dbContext.UserFollows
+            .AsNoTracking()
+            .Where(follow => follow.FollowerId == userId)
+            .Join(dbContext.Users, follow => follow.FollowedUserId, user => user.Id, (_, user) => user)
+            .CountAsync(user => user.IsActive, cancellationToken);
+    }
+
     public Task<FollowUsersResult> GetFollowersAsync(
         Guid userId,
         Guid currentUserId,
