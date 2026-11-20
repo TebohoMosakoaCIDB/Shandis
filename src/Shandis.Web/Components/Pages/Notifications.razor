@@ -1,0 +1,192 @@
+@page "/notifications"
+@inject Shandis.Web.Services.ShandisApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Notifications · Shandis</PageTitle>
+
+<div class="notifications-page">
+    <header class="page-header">
+        <div>
+            <span class="eyebrow">YOUR ACTIVITY</span>
+            <h1>Notifications</h1>
+            <p>Stay up to date with what's happening around your Memories.</p>
+        </div>
+        @if (UnreadCount > 0)
+        {
+            <button class="mark-all-button" disabled="@isMarkingAll" @onclick="MarkAllReadAsync">
+                @(isMarkingAll ? "Updating…" : "Mark all as read")
+            </button>
+        }
+    </header>
+
+    @if (isLoading)
+    {
+        <div class="empty-state">Loading your notifications…</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="empty-state">
+            <p>@errorMessage</p>
+            <button class="mark-all-button" @onclick="LoadAsync">Try again</button>
+        </div>
+    }
+    else if (notifications.Count == 0)
+    {
+        <div class="empty-state">
+            <span class="empty-icon">♡</span>
+            <strong>You're all caught up</strong>
+            <span>When someone interacts with you or your Memories, you'll see it here.</span>
+        </div>
+    }
+    else
+    {
+        <div class="notification-summary">
+            <span>@notifications.Count recent notifications</span>
+            <span>@UnreadCount unread</span>
+        </div>
+        <section class="notification-feed" aria-label="Your notifications">
+            @foreach (var item in notifications)
+            {
+                <button type="button" class="notification-row @(item.IsRead ? "read" : "unread")"
+                        @onclick="() => OpenNotificationAsync(item)">
+                    <span class="notification-icon">@GetIcon(item.Type)</span>
+                    <span class="notification-body">
+                        <strong>@item.Title</strong>
+                        <span>@GetMessage(item)</span>
+                        <small>@FormatAge(item.CreatedAtUtc)</small>
+                    </span>
+                    @if (!item.IsRead)
+                    {
+                        <span class="unread-indicator" aria-label="Unread"></span>
+                    }
+                </button>
+            }
+        </section>
+        <p class="list-footnote">Showing your 30 most recent notifications.</p>
+    }
+</div>
+
+<style>
+    .notifications-page{max-width:850px;margin:0 auto;padding:30px 0 60px;color:var(--shandis-text)}
+    .page-header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:25px}
+    .eyebrow{color:var(--shandis-primary);font-size:10px;font-weight:850;letter-spacing:.12em}
+    .page-header h1{margin:6px 0 5px;font:850 30px Manrope,sans-serif;letter-spacing:-.05em}
+    .page-header p{margin:0;color:var(--shandis-text-muted);font-size:12px}
+    .mark-all-button{padding:10px 14px;border:1px solid var(--shandis-border);border-radius:10px;background:var(--shandis-surface);color:var(--shandis-primary);font-size:11px;font-weight:800;cursor:pointer}
+    .mark-all-button:disabled{opacity:.55;cursor:wait}
+    .notification-summary{display:flex;justify-content:space-between;margin:0 2px 10px;color:var(--shandis-text-muted);font-size:10px;font-weight:700}
+    .notification-feed{overflow:hidden;border:1px solid var(--shandis-border);border-radius:16px;background:var(--shandis-surface)}
+    .notification-row{display:flex;width:100%;align-items:center;gap:14px;padding:16px 18px;border:0;border-bottom:1px solid var(--shandis-border);background:transparent;color:inherit;text-align:left;cursor:pointer}
+    .notification-row:last-child{border-bottom:0}
+    .notification-row.unread{background:var(--shandis-surface-soft,rgba(120,120,120,.055))}
+    .notification-row:hover{background:var(--shandis-surface-soft,rgba(120,120,120,.09))}
+    .notification-icon{display:grid;place-items:center;width:43px;height:43px;flex:0 0 43px;border-radius:14px;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:19px;font-weight:800}
+    .notification-body{display:flex;min-width:0;flex:1;flex-direction:column;gap:4px}
+    .notification-body strong{font-size:12px;font-weight:850}
+    .notification-body>span{color:var(--shandis-text-muted);font-size:11px;line-height:1.5}
+    .notification-body small{color:var(--shandis-text-muted);font-size:10px}
+    .unread-indicator{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:var(--shandis-primary)}
+    .empty-state{display:flex;min-height:220px;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:30px;border:1px solid var(--shandis-border);border-radius:16px;background:var(--shandis-surface);color:var(--shandis-text-muted);text-align:center;font-size:12px}
+    .empty-state strong{color:var(--shandis-text);font-size:15px}
+    .empty-state p{margin:0 0 5px}
+    .empty-icon{color:var(--shandis-primary);font-size:32px}
+    .list-footnote{margin:12px 2px;color:var(--shandis-text-muted);font-size:10px}
+    @@media(max-width:600px){.notifications-page{padding-top:20px}.page-header{align-items:flex-start;flex-direction:column}.page-header h1{font-size:25px}.notification-row{gap:11px;padding:13px}.notification-icon{width:38px;height:38px;flex-basis:38px}}
+</style>
+
+@code {
+    private readonly List<Shandis.Web.Models.NotificationItem> notifications = [];
+    private bool isLoading = true;
+    private bool isMarkingAll;
+    private string? errorMessage;
+
+    private int UnreadCount => notifications.Count(x => !x.IsRead);
+
+    protected override async Task OnInitializedAsync()
+        => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            var feed = await ApiClient.GetNotificationsAsync();
+            notifications.Clear();
+            notifications.AddRange(feed.Items);
+        }
+        catch
+        {
+            errorMessage = "We couldn't load your notifications. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task MarkAllReadAsync()
+    {
+        isMarkingAll = true;
+        try
+        {
+            await ApiClient.MarkAllNotificationsReadAsync();
+            foreach (var item in notifications)
+                item.IsRead = true;
+        }
+        catch
+        {
+            errorMessage = "We couldn't update your notifications. Please try again.";
+        }
+        finally
+        {
+            isMarkingAll = false;
+        }
+    }
+
+    private async Task OpenNotificationAsync(Shandis.Web.Models.NotificationItem item)
+    {
+        if (!item.IsRead)
+        {
+            try
+            {
+                await ApiClient.MarkNotificationReadAsync(item.Id);
+                item.IsRead = true;
+            }
+            catch
+            {
+                errorMessage = "We couldn't mark this notification as read.";
+                return;
+            }
+        }
+
+        Navigation.NavigateTo(string.IsNullOrWhiteSpace(item.TargetUrl) ? "/" : item.TargetUrl);
+    }
+
+    private static string GetIcon(int type) => type switch
+    {
+        1 => "✉",
+        2 or 5 => "✓",
+        3 => "↩",
+        4 => "◷",
+        6 => "×",
+        7 or 10 => "♡",
+        8 => "☰",
+        _ => "•"
+    };
+
+    private static string GetMessage(Shandis.Web.Models.NotificationItem item)
+        => item.Type == 10
+            ? $"{(string.IsNullOrWhiteSpace(item.ActorName) ? "Someone" : item.ActorName)} started following you."
+            : item.Message;
+
+    private static string FormatAge(DateTime createdAtUtc)
+    {
+        var age = DateTime.UtcNow - DateTime.SpecifyKind(createdAtUtc, DateTimeKind.Utc);
+        if (age.TotalMinutes < 1) return "Just now";
+        if (age.TotalHours < 1) return $"{(int)age.TotalMinutes}m ago";
+        if (age.TotalDays < 1) return $"{(int)age.TotalHours}h ago";
+        if (age.TotalDays < 7) return $"{(int)age.TotalDays}d ago";
+        return createdAtUtc.ToLocalTime().ToString("dd MMM yyyy");
+    }
+}
