@@ -11,8 +11,17 @@ public sealed class SavedMemoryConfiguration : IEntityTypeConfiguration<SavedMem
     {
         builder.ToTable("SavedMemories");
         builder.HasKey(x => x.Id);
-        builder.HasOne<ShandisUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
-        builder.HasOne<Memory>().WithMany().HasForeignKey(x => x.MemoryId).OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<ShandisUser>()
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(x => x.Memory)
+            .WithMany()
+            .HasForeignKey(x => x.MemoryId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.HasIndex(x => new { x.UserId, x.MemoryId }).IsUnique();
         builder.HasIndex(x => new { x.UserId, x.CreatedAtUtc });
     }
