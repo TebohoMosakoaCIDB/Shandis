@@ -20,10 +20,10 @@
     <EditForm Model="model" OnValidSubmit="HandleLoginAsync">
         <DataAnnotationsValidator />
         <div class="auth-field">
-            <label for="email">Email address</label>
-            <InputText id="email" @bind-Value="model.Email" type="email"
-                       autocomplete="email" placeholder="you@example.com" />
-            <ValidationMessage For="@(() => model.Email)" />
+            <label for="identifier">Email address or username</label>
+            <InputText id="identifier" @bind-Value="model.Identifier" type="text"
+                       autocomplete="username" placeholder="you@example.com or yourusername" />
+            <ValidationMessage For="@(() => model.Identifier)" />
         </div>
 
         <div class="auth-field">
@@ -53,7 +53,7 @@
 
         try
         {
-            var result = await AuthService.LoginAsync(model.Email, model.Password);
+            var result = await AuthService.LoginAsync(model.Identifier, model.Password);
 
             if (!result.Success)
             {
