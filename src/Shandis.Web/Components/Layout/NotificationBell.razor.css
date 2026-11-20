@@ -174,3 +174,16 @@
     color: var(--shandis-primary, #d86b5c);
     font-size: 2rem;
 }
+
+
+.notification-view-all {
+    color: var(--shandis-primary, #d86b5c);
+    font-size: .78rem;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.notification-view-all:hover {
+    text-decoration: underline;
+}
