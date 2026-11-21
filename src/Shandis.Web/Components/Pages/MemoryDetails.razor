@@ -565,8 +565,9 @@
     .invitation-heading h2{margin:0;font:850 20px Manrope,sans-serif;letter-spacing:-.03em}
     .invitation-heading p:not(.eyebrow){margin:5px 0 0;color:var(--shandis-text-muted);font-size:10px}
     .invitation-count{padding:6px 10px;border-radius:999px;background:var(--shandis-surface-muted);color:var(--shandis-text-muted);font-size:9px;font-weight:800}
-    .invitation-form{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;align-items:end;gap:10px;margin-top:18px}
+    .invitation-form{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;align-items:start;gap:10px;margin-top:18px}
     .invitation-form label{display:grid;gap:6px;min-width:0}
+    .invitation-form > button{align-self:start;margin-top:19px;min-height:36px}
     .invitation-form label > span{color:var(--shandis-text-muted);font-size:9px;font-weight:800}
     .invitation-form input,.invitation-form select{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--shandis-border);border-radius:9px;background:var(--shandis-surface);color:var(--shandis-text);font:inherit;font-size:10px}
     .invitation-form input:focus,.invitation-form select:focus{outline:2px solid var(--shandis-primary-soft);border-color:var(--shandis-primary)}
@@ -678,7 +679,7 @@
     .comment-composer .shandis-btn{padding:8px 13px;font-size:9px}
     @@keyframes spin{to{transform:rotate(360deg)}}
     @@media(max-width:760px){.memory-details-page{padding:10px 14px 85px}.memory-profile-content{gap:12px;padding:0 16px 16px}.memory-profile-avatar{flex-basis:68px;width:68px;height:68px;font-size:19px}.memory-profile-count{padding:8px 10px}.memory-profile-actions{padding:10px 16px}.memory-profile-art{height:110px;padding:18px}.profile-art-mark{font-size:40px}.profile-art-label{font-size:7px}.lightbox-content{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(220px,45%);height:min(850px,92vh);max-width:600px}.lightbox-details{max-height:none;overflow:hidden;padding:13px}.lightbox-comments-scroll{max-height:125px}.lightbox-author{padding:9px 0}.lightbox-details h3{margin:10px 0 3px}.lightbox-footer{padding-top:8px}.gallery-lightbox{padding:35px 10px}.lightbox-nav{width:32px;height:32px;font-size:23px}}
-    @@media(max-width:650px){.invitation-panel{padding:17px}.invitation-form{grid-template-columns:1fr}.invitation-form button{justify-self:start}}
+    @@media(max-width:650px){.invitation-panel{padding:17px}.invitation-form{grid-template-columns:1fr}.invitation-form > button{justify-self:start;margin-top:0}}
     @@media(max-width:500px){.memory-profile-content{align-items:flex-start;flex-wrap:wrap}.memory-profile-count{margin-left:auto;border-left:0}.memory-profile-main{flex-basis:calc(100% - 85px)}.memory-profile-main h1{font-size:22px}.memory-profile-actions{gap:13px}.section-heading{align-items:flex-start;flex-direction:column}.gallery-filters{align-self:flex-start}.gallery-grid{gap:2px}.gallery-lightbox{padding:30px 6px}.lightbox-content{height:90vh}.lightbox-close{top:4px;right:10px}}
 </style>
 
