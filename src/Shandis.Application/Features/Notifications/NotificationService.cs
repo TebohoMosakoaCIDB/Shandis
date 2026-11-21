@@ -15,7 +15,8 @@ public sealed class NotificationService(INotificationRepository repository) : IN
         string targetUrl,
         Guid? memoryId = null,
         Guid? momentId = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Guid? invitationId = null)
     {
         if (recipientUserId == Guid.Empty)
             throw new ArgumentException("A valid notification recipient is required.", nameof(recipientUserId));
@@ -28,9 +29,18 @@ public sealed class NotificationService(INotificationRepository repository) : IN
             message,
             targetUrl,
             memoryId,
-            momentId);
+            momentId,
+            invitationId);
 
         await repository.AddAsync(notification, cancellationToken);
+    }
+
+    public Task<int> ResolveInvitationAsync(Guid invitationId, Guid recipientUserId, string title, string message, CancellationToken cancellationToken = default)
+    {
+        if (invitationId == Guid.Empty || recipientUserId == Guid.Empty)
+            throw new ArgumentException("Valid invitation and recipient IDs are required.");
+
+        return repository.ResolveInvitationAsync(invitationId, recipientUserId, title, message, cancellationToken);
     }
 
     public async Task<NotificationFeedResult> GetForUserAsync(
