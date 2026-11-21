@@ -111,9 +111,59 @@
                 </div>
 
                 <form class="invitation-form" @onsubmit="SendInvitationAsync" @onsubmit:preventDefault>
-                    <label>
-                        <span>Username or email address</span>
-                        <input type="text" @bind="inviteIdentifier" maxlength="320" placeholder="username or friend@example.com" required />
+                    <label class="invitee-label">
+                        <span>Find a Shandis member or invite by email</span>
+                        <div class="invitee-field">
+                            <input type="text"
+                                   value="@inviteIdentifier"
+                                   @oninput="HandleInviteInputAsync"
+                                   maxlength="320"
+                                   autocomplete="off"
+                                   placeholder="Search by name or username"
+                                   required />
+                            @if (isSearchingMembers)
+                            {
+                                <div class="invitee-search-hint">Searching Shandis members…</div>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(memberSearchError))
+                            {
+                                <div class="invitee-search-hint">@memberSearchError</div>
+                            }
+                            else if (showMemberSuggestions && memberSearchResults.Count > 0)
+                            {
+                                <div class="member-suggestions" role="listbox" aria-label="Matching Shandis members">
+                                    @foreach (var member in memberSearchResults)
+                                    {
+                                        <button type="button"
+                                                class="member-suggestion"
+                                                role="option"
+                                                @key="member.Id"
+                                                @onclick="() => SelectInvitee(member)">
+                                            <span class="member-suggestion-avatar">@Initials(member.DisplayName)</span>
+                                            <span class="member-suggestion-details">
+                                                <strong>@member.DisplayName</strong>
+                                                <small>@@@member.UserName</small>
+                                            </span>
+                                            <span class="member-suggestion-select">Select</span>
+                                        </button>
+                                    }
+                                </div>
+                            }
+                            else if (showMemberSuggestions && inviteIdentifier.Trim().TrimStart('@').Length >= 2)
+                            {
+                                <div class="invitee-search-hint">
+                                    No matching Shandis member found. If they're not on Shandis yet, enter their email address instead.
+                                </div>
+                            }
+                        </div>
+                        @if (selectedInvitee is not null)
+                        {
+                            <small class="selected-invitee">Inviting <strong>@selectedInvitee.DisplayName</strong> ( @@@selectedInvitee.UserName )</small>
+                        }
+                        else
+                        {
+                            <small class="invitee-help">Registered members appear as you type. To invite someone new, enter their email address.</small>
+                        }
                     </label>
                     <label>
                         <span>Access</span>
@@ -123,7 +173,7 @@
                         </select>
                     </label>
                     <button class="shandis-btn shandis-btn-primary" type="submit" disabled="@isSendingInvitation">
-                        @(isSendingInvitation ? "Saving…" : "＋ Create / update invitation")
+                        @(isSendingInvitation ? "Sending…" : "＋ Send invitation")
                     </button>
                 </form>
 
@@ -159,7 +209,7 @@
                 {
                     <p class="invitation-feedback is-error">@invitationLoadError</p>
                 }
-                <p class="invitation-note">Enter a registered member's username, with or without the leading @@, or an email address for someone who has not joined Shandis. If an invitation already exists, its role and status are updated instead of creating another record. The member must accept again; their existing Moments and comments are retained. Email delivery for new members still needs to be configured. Invitations expire after 7 days.</p>
+                <p class="invitation-note">Choose a registered member from the search suggestions, or enter an email address to invite someone who has not joined Shandis. If an invitation already exists, its role and status are updated. The member must accept again; their existing Moments and comments are retained. Invitations expire after 7 days.</p>
             </section>
         }
 
@@ -521,6 +571,19 @@
     .invitation-form input,.invitation-form select{width:100%;min-width:0;padding:10px 12px;border:1px solid var(--shandis-border);border-radius:9px;background:var(--shandis-surface);color:var(--shandis-text);font:inherit;font-size:10px}
     .invitation-form input:focus,.invitation-form select:focus{outline:2px solid var(--shandis-primary-soft);border-color:var(--shandis-primary)}
     .invitation-form button{white-space:nowrap}
+    .invitee-field{position:relative}
+    .invitee-search-hint{padding:10px 12px;border:1px solid var(--shandis-border);border-top:0;border-radius:0 0 9px 9px;background:var(--shandis-surface);color:var(--shandis-text-muted);font-size:9px;line-height:1.5}
+    .member-suggestions{position:absolute;z-index:20;top:calc(100% - 1px);left:0;right:0;max-height:240px;overflow-y:auto;border:1px solid var(--shandis-border);border-radius:0 0 10px 10px;background:var(--shandis-surface);box-shadow:var(--shandis-shadow)}
+    .member-suggestion{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;border-bottom:1px solid var(--shandis-border);background:transparent;color:var(--shandis-text);text-align:left;cursor:pointer}
+    .member-suggestion:last-child{border-bottom:0}
+    .member-suggestion:hover,.member-suggestion:focus{outline:0;background:var(--shandis-surface-muted)}
+    .member-suggestion-avatar{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border-radius:50%;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:9px;font-weight:850}
+    .member-suggestion-details{display:grid;gap:2px;min-width:0}
+    .member-suggestion-details strong{font-size:10px}
+    .member-suggestion-details small{color:var(--shandis-text-muted);font-size:9px}
+    .member-suggestion-select{margin-left:auto;color:var(--shandis-primary);font-size:9px;font-weight:800}
+    .selected-invitee,.invitee-help{display:block;margin-top:5px;color:var(--shandis-text-muted);font-size:9px}
+    .selected-invitee strong{color:var(--shandis-text)}
     .invitation-feedback{margin:12px 0 0;font-size:10px;font-weight:700}
     .invitation-feedback.is-success{color:#39845D}.invitation-feedback.is-error{color:#C34D55}
     .invitation-list{display:grid;gap:0;margin-top:15px;border-top:1px solid var(--shandis-border)}
@@ -653,6 +716,12 @@
     private List<Shandis.Web.Models.InvitationItem> memoryInvitations = [];
     private string inviteIdentifier = string.Empty;
     private int inviteRole = 2;
+    private Shandis.Web.Models.MemberSearchItem? selectedInvitee;
+    private List<Shandis.Web.Models.MemberSearchItem> memberSearchResults = [];
+    private CancellationTokenSource? memberSearchCts;
+    private bool isSearchingMembers;
+    private bool showMemberSuggestions;
+    private string? memberSearchError;
     private bool isSendingInvitation;
     private string? invitationMessage;
     private bool invitationIsError;
@@ -849,6 +918,82 @@
         }
     }
 
+    private async Task HandleInviteInputAsync(ChangeEventArgs args)
+    {
+        inviteIdentifier = args.Value?.ToString() ?? string.Empty;
+        selectedInvitee = null;
+        invitationMessage = null;
+        memberSearchError = null;
+        memberSearchResults = [];
+
+        var query = inviteIdentifier.Trim();
+        var isEmail = query.Contains("@", StringComparison.Ordinal) &&
+                      !query.StartsWith("@", StringComparison.Ordinal);
+
+        if (query.StartsWith("@", StringComparison.Ordinal))
+            query = query.TrimStart('@');
+
+        if (query.Length < 2 || isEmail)
+        {
+            CancelMemberSearch();
+            return;
+        }
+
+        memberSearchCts?.Cancel();
+        memberSearchCts?.Dispose();
+
+        var searchCts = new CancellationTokenSource();
+        memberSearchCts = searchCts;
+        showMemberSuggestions = true;
+        isSearchingMembers = true;
+
+        try
+        {
+            await Task.Delay(250, searchCts.Token);
+            var results = await ApiClient.SearchMembersAsync(query, searchCts.Token);
+
+            if (memberSearchCts != searchCts)
+                return;
+
+            memberSearchResults = results;
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer keystroke or a selected member superseded this search.
+        }
+        catch
+        {
+            if (memberSearchCts == searchCts)
+                memberSearchError = "Member search is unavailable. You can still enter their exact username or email address.";
+        }
+        finally
+        {
+            if (memberSearchCts == searchCts)
+                isSearchingMembers = false;
+        }
+    }
+
+    private void SelectInvitee(Shandis.Web.Models.MemberSearchItem member)
+    {
+        CancelMemberSearch();
+        selectedInvitee = member;
+        inviteIdentifier = $"@{member.UserName}";
+        memberSearchResults = [];
+        memberSearchError = null;
+        showMemberSuggestions = false;
+        invitationMessage = null;
+    }
+
+    private void CancelMemberSearch()
+    {
+        memberSearchCts?.Cancel();
+        memberSearchCts?.Dispose();
+        memberSearchCts = null;
+        isSearchingMembers = false;
+        showMemberSuggestions = false;
+        memberSearchResults = [];
+    }
+
     private async Task SendInvitationAsync()
     {
         if (string.IsNullOrWhiteSpace(inviteIdentifier) || isSendingInvitation)
@@ -860,25 +1005,62 @@
 
         try
         {
-            var enteredInvitee = inviteIdentifier.Trim();
-            var invitedByUserName = enteredInvitee.StartsWith("@", StringComparison.Ordinal)
-                || !enteredInvitee.Contains("@", StringComparison.Ordinal);
-            await ApiClient.CreateInvitationAsync(MemoryId, inviteIdentifier.Trim(), inviteRole);
+            var enteredInvitee = selectedInvitee?.UserName ?? inviteIdentifier.Trim();
+            var invitedByUserName = selectedInvitee is not null ||
+                enteredInvitee.StartsWith("@", StringComparison.Ordinal) ||
+                !enteredInvitee.Contains("@", StringComparison.Ordinal);
+
+            await ApiClient.CreateInvitationAsync(MemoryId, enteredInvitee, inviteRole);
+
             inviteIdentifier = string.Empty;
+            selectedInvitee = null;
+            CancelMemberSearch();
             memoryInvitations = await ApiClient.GetMemoryInvitationsAsync(MemoryId);
             invitationMessage = invitedByUserName
-                ? "Invitation saved. The member must accept it again before regaining access."
-                : "Invitation saved. Registered members receive an in-app notification; delivery to new members requires the email service to be configured.";
+                ? "Invitation sent to the Shandis member. They'll see it in their notifications and can accept it from Shared with Me."
+                : "Invitation saved. If this email belongs to an existing member, they'll receive an in-app notification. Email delivery for new members still needs to be configured.";
         }
         catch (Exception ex)
         {
             invitationIsError = true;
-            invitationMessage = ex.Message;
+            invitationMessage = GetFriendlyInvitationError(ex);
         }
         finally
         {
             isSendingInvitation = false;
         }
+    }
+
+    private static string GetFriendlyInvitationError(Exception exception)
+    {
+        var message = exception.Message;
+
+        if (exception is HttpRequestException)
+        {
+            try
+            {
+                using var document = System.Text.Json.JsonDocument.Parse(message);
+                if (document.RootElement.TryGetProperty("message", out var messageElement))
+                    message = messageElement.GetString() ?? message;
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                // The response was not a JSON error payload.
+            }
+
+            if (message.Contains("No Shandis member was found", StringComparison.OrdinalIgnoreCase))
+                return "We couldn't find a Shandis member with that username. Check the spelling, choose someone from the suggestions, or enter their email address.";
+
+            if (message.Contains("cannot invite yourself", StringComparison.OrdinalIgnoreCase))
+                return "You can't invite yourself to your own Memory.";
+
+            if (message.Contains("does not have a usable email address", StringComparison.OrdinalIgnoreCase))
+                return "This member doesn't have an email address available for invitations.";
+
+            return "We couldn't send the invitation right now. Please check the details and try again.";
+        }
+
+        return "Something went wrong while sending the invitation. Please try again.";
     }
 
     private async Task RevokeInvitationAsync(Guid invitationId)
