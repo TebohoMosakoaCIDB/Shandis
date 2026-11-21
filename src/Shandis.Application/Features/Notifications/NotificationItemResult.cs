@@ -13,6 +13,8 @@ public sealed class NotificationItemResult
     public string TargetUrl { get; init; } = string.Empty;
     public Guid? MemoryId { get; init; }
     public Guid? MomentId { get; init; }
+    public Guid? InvitationId { get; init; }
+    public bool IsResolved { get; init; }
     public bool IsRead { get; init; }
     public DateTime CreatedAtUtc { get; init; }
     public DateTime? ReadAtUtc { get; init; }
