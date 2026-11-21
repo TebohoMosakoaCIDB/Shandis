@@ -317,7 +317,25 @@ public class InvitationRepository : IInvitationRepository
         var expiredInvitations = await query.ToListAsync(cancellationToken);
 
         foreach (var invitation in expiredInvitations)
+        {
             invitation.Expire();
+
+            if (invitation.InvitedUserId.HasValue)
+            {
+                var relatedNotifications = await dbContext.UserNotifications
+                    .Where(x => x.InvitationId == invitation.Id &&
+                                x.RecipientUserId == invitation.InvitedUserId.Value &&
+                                !x.IsResolved)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var notification in relatedNotifications)
+                {
+                    notification.Resolve(
+                        "Invitation expired",
+                        "This Memory invitation has expired. You can no longer accept it.");
+                }
+            }
+        }
 
         if (expiredInvitations.Count > 0)
             await dbContext.SaveChangesAsync(cancellationToken);
