@@ -16,6 +16,22 @@ public sealed class NotificationRepository(IDbContextFactory<ShandisDbContext> c
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<int> ResolveInvitationAsync(Guid invitationId, Guid recipientUserId, string title, string message, CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var notifications = await dbContext.Set<UserNotification>()
+            .Where(x => x.InvitationId == invitationId && x.RecipientUserId == recipientUserId && !x.IsResolved)
+            .ToListAsync(cancellationToken);
+
+        foreach (var notification in notifications)
+            notification.Resolve(title, message);
+
+        if (notifications.Count > 0)
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+        return notifications.Count;
+    }
+
     public async Task<IReadOnlyList<NotificationItemResult>> GetForUserAsync(
         Guid userId, int take = 30, CancellationToken cancellationToken = default)
     {
@@ -43,6 +59,8 @@ public sealed class NotificationRepository(IDbContextFactory<ShandisDbContext> c
                 TargetUrl = notification.TargetUrl,
                 MemoryId = notification.MemoryId,
                 MomentId = notification.MomentId,
+                InvitationId = notification.InvitationId,
+                IsResolved = notification.IsResolved,
                 IsRead = notification.IsRead,
                 CreatedAtUtc = notification.CreatedAtUtc,
                 ReadAtUtc = notification.ReadAtUtc
