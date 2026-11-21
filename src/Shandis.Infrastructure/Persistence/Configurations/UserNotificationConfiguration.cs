@@ -28,5 +28,6 @@ public sealed class UserNotificationConfiguration : IEntityTypeConfiguration<Use
 
         builder.HasIndex(x => new { x.RecipientUserId, x.IsRead, x.CreatedAtUtc });
         builder.HasIndex(x => x.ActorUserId);
+        builder.HasIndex(x => x.InvitationId);
     }
 }
