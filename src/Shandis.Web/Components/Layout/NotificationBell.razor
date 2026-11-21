@@ -48,13 +48,14 @@
                     @foreach (var item in notifications)
                     {
                         <button type="button"
-                                class="notification-item @(item.IsRead ? "" : "unread")"
+                                class="notification-item @(item.IsResolved ? "resolved" : item.IsRead ? "" : "unread")"
+                                disabled="@item.IsResolved"
                                 @onclick="() => OpenNotificationAsync(item)">
                             <span class="notification-item-icon">@GetIcon(item.Type)</span>
                             <span class="notification-item-content">
                                 <strong>@item.Title</strong>
                                 <span>@GetMessage(item)</span>
-                                <small>@FormatAge(item.CreatedAtUtc)</small>
+                                <small>@(item.IsResolved ? "No action required" : FormatAge(item.CreatedAtUtc))</small>
                             </span>
                             @if (!item.IsRead)
                             {
@@ -163,6 +164,8 @@
 
     private async Task OpenNotificationAsync(Shandis.Web.Models.NotificationItem item)
     {
+        if (item.IsResolved)
+            return;
         if (!item.IsRead)
         {
             try
