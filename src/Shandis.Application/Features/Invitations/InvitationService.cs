@@ -160,15 +160,25 @@ public class InvitationService : IInvitationService
 
         if (existingUserId.HasValue)
         {
+            // A reissued invitation reuses its canonical ID. Resolve any previous
+            // notification before creating the fresh actionable notification.
+            await _notificationService.ResolveInvitationAsync(
+                persistedInvitationId,
+                existingUserId.Value,
+                "Previous invitation updated",
+                $"A previous invitation to \"{memoryTitle}\" was replaced with a new invitation.",
+                cancellationToken);
+
             await _notificationService.CreateAsync(
                 existingUserId.Value,
                 command.InvitedByUserId,
                 NotificationType.MemoryInvitationReceived,
                 "Memory invitation",
-                $"Your invitation to \"{memoryTitle}\" has been updated. Accept it to join as a {(command.AssignedRole == InvitationRole.Contributor ? "Contributor" : "Viewer")}.",
+                $"You've been invited to join \"{memoryTitle}\" as a {(command.AssignedRole == InvitationRole.Contributor ? "Contributor" : "Viewer")}.",
                 "/shared",
                 command.MemoryId,
-                cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken,
+                invitationId: persistedInvitationId);
         }
 
         return new CreateInvitationResult
@@ -361,6 +371,13 @@ public class InvitationService : IInvitationService
             isExistingParticipant,
             cancellationToken);
 
+        await _notificationService.ResolveInvitationAsync(
+            invitation.Id,
+            userId,
+            "Invitation accepted",
+            $"You've accepted the invitation to \"{invitation.Memory?.Title ?? "this Memory"}\".",
+            cancellationToken);
+
         await _notificationService.CreateAsync(
             invitation.InvitedByUserId,
             userId,
@@ -409,6 +426,13 @@ public class InvitationService : IInvitationService
             invitation,
             cancellationToken);
 
+        await _notificationService.ResolveInvitationAsync(
+            invitation.Id,
+            userId,
+            "Invitation declined",
+            $"You've declined the invitation to \"{invitation.Memory?.Title ?? "this Memory"}\".",
+            cancellationToken);
+
         await _notificationService.CreateAsync(
             invitation.InvitedByUserId,
             userId,
@@ -444,5 +468,15 @@ public class InvitationService : IInvitationService
         await _invitationRepository.UpdateAsync(
             invitation,
             cancellationToken);
+
+        if (invitation.InvitedUserId.HasValue)
+        {
+            await _notificationService.ResolveInvitationAsync(
+                invitation.Id,
+                invitation.InvitedUserId.Value,
+                "Invitation withdrawn",
+                $"The organiser withdrew the invitation to \"{invitation.Memory?.Title ?? "this Memory"}\". You no longer need to take action.",
+                cancellationToken);
+        }
     }
 }
