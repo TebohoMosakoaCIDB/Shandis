@@ -17,6 +17,8 @@ public sealed class NotificationItem
     public string TargetUrl { get; set; } = "/";
     public Guid? MemoryId { get; set; }
     public Guid? MomentId { get; set; }
+    public Guid? InvitationId { get; set; }
+    public bool IsResolved { get; set; }
     public bool IsRead { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? ReadAtUtc { get; set; }
