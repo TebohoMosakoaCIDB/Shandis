@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Shandis.Application.Abstractions.Persistence;
 using Shandis.Application.Features.Notifications;
 using Shandis.Domain.Entities;
+using Shandis.Domain.Enums;
 using Shandis.Infrastructure.Persistence;
 
 namespace Shandis.Infrastructure.Persistence.Repositories;
@@ -19,8 +20,21 @@ public sealed class NotificationRepository(IDbContextFactory<ShandisDbContext> c
     public async Task<int> ResolveInvitationAsync(Guid invitationId, Guid recipientUserId, string title, string message, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var memoryId = await dbContext.MemoryInvitations
+            .AsNoTracking()
+            .Where(x => x.Id == invitationId)
+            .Select(x => (Guid?)x.MemoryId)
+            .FirstOrDefaultAsync(cancellationToken);
+
         var notifications = await dbContext.Set<UserNotification>()
-            .Where(x => x.InvitationId == invitationId && x.RecipientUserId == recipientUserId && !x.IsResolved)
+            .Where(x =>
+                x.RecipientUserId == recipientUserId &&
+                !x.IsResolved &&
+                (x.InvitationId == invitationId ||
+                 (x.InvitationId == null &&
+                  memoryId.HasValue &&
+                  x.MemoryId == memoryId.Value &&
+                  x.Type == NotificationType.MemoryInvitationReceived)))
             .ToListAsync(cancellationToken);
 
         foreach (var notification in notifications)
