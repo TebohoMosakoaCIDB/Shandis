@@ -47,13 +47,14 @@
         <section class="notification-feed" aria-label="Your notifications">
             @foreach (var item in notifications)
             {
-                <button type="button" class="notification-row @(item.IsRead ? "read" : "unread")"
+                <button type="button" class="notification-row @(item.IsResolved ? "resolved" : item.IsRead ? "read" : "unread")"
+                        disabled="@item.IsResolved"
                         @onclick="() => OpenNotificationAsync(item)">
                     <span class="notification-icon">@GetIcon(item.Type)</span>
                     <span class="notification-body">
                         <strong>@item.Title</strong>
                         <span>@GetMessage(item)</span>
-                        <small>@FormatAge(item.CreatedAtUtc)</small>
+                        <small>@(item.IsResolved ? "No action required" : FormatAge(item.CreatedAtUtc))</small>
                     </span>
                     @if (!item.IsRead)
                     {
@@ -79,7 +80,9 @@
     .notification-row{display:flex;width:100%;align-items:center;gap:14px;padding:16px 18px;border:0;border-bottom:1px solid var(--shandis-border);background:transparent;color:inherit;text-align:left;cursor:pointer}
     .notification-row:last-child{border-bottom:0}
     .notification-row.unread{background:var(--shandis-surface-soft,rgba(120,120,120,.055))}
-    .notification-row:hover{background:var(--shandis-surface-soft,rgba(120,120,120,.09))}
+    .notification-row:hover:not(:disabled){background:var(--shandis-surface-soft,rgba(120,120,120,.09))}
+    .notification-row.resolved{cursor:default;opacity:.72}
+    .notification-row:disabled{cursor:default}
     .notification-icon{display:grid;place-items:center;width:43px;height:43px;flex:0 0 43px;border-radius:14px;background:var(--shandis-primary-soft);color:var(--shandis-primary);font-size:19px;font-weight:800}
     .notification-body{display:flex;min-width:0;flex:1;flex-direction:column;gap:4px}
     .notification-body strong{font-size:12px;font-weight:850}
@@ -146,6 +149,8 @@
 
     private async Task OpenNotificationAsync(Shandis.Web.Models.NotificationItem item)
     {
+        if (item.IsResolved)
+            return;
         if (!item.IsRead)
         {
             try
