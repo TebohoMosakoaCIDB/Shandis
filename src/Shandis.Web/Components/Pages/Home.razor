@@ -75,7 +75,11 @@
                         </header>
 
                         <a class="feed-cover cover-tone-@((Math.Abs(memory.Id.GetHashCode()) % 5) + 1)" href="@($"/memories/{memory.Id}")">
-                            @if (memory.LatestMoment?.Media.FirstOrDefault() is { } previewMedia &&
+                            @if (!string.IsNullOrWhiteSpace(memory.CoverImageUrl))
+                            {
+                                <img class="feed-media-preview" src="@memory.CoverImageUrl" alt="@($"{memory.Title} cover image")" loading="lazy" />
+                            }
+                            else if (memory.LatestMoment?.Media.FirstOrDefault() is { } previewMedia &&
                                  previewMedia.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
                             {
                                 <img class="feed-media-preview" src="@previewMedia.Url" alt="@memory.Title" loading="lazy" />
@@ -85,7 +89,8 @@
                                 <span class="cover-decoration">✳</span>
                                 <span class="cover-wordmark">SHANDIS</span>
                             }
-                            @if (memory.LatestMoment?.Media.FirstOrDefault() is { } imageMedia &&
+                            @if (!string.IsNullOrWhiteSpace(memory.CoverImageUrl) ||
+                                 memory.LatestMoment?.Media.FirstOrDefault() is { } imageMedia &&
                                  imageMedia.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
                             {
                                 <span class="cover-scrim"></span>
@@ -104,7 +109,7 @@
                             @if (memory.LatestMoment?.Media.FirstOrDefault() is { } mediaPreview &&
                                  mediaPreview.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
                             {
-                                <span class="cover-open">Latest moment ↗</span>
+                                <span class="cover-open">@(string.IsNullOrWhiteSpace(memory.CoverImageUrl) ? "Latest moment ↗" : "Open memory ↗")</span>
                             }
                             else
                             {
@@ -214,6 +219,7 @@
                 CategoryName = item.CategoryName,
                 Visibility = item.Visibility,
                 StartDateUtc = item.StartDateUtc,
+                CoverImageUrl = item.CoverImageUrl,
                 IsOwner = item.IsOwner
             }).Concat(sharedMemories.Select(item => new FeedMemory
             {
@@ -224,6 +230,7 @@
                 CategoryName = item.CategoryName,
                 Visibility = item.Visibility,
                 StartDateUtc = item.StartDateUtc,
+                CoverImageUrl = item.CoverImageUrl,
                 IsOwner = false
             }))
             .GroupBy(item => item.Id)
@@ -286,6 +293,7 @@
         public string? CategoryName { get; set; }
         public int Visibility { get; set; }
         public DateTime? StartDateUtc { get; set; }
+        public string? CoverImageUrl { get; set; }
         public bool IsOwner { get; set; }
         public Shandis.Web.Models.MomentItem? LatestMoment { get; set; }
     }
