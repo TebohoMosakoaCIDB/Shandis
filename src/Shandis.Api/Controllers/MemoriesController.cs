@@ -103,7 +103,7 @@ public class MemoriesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UploadCoverImage(
-        Guid id, [FromForm] IFormFile file, CancellationToken cancellationToken)
+        Guid id, IFormFile file, CancellationToken cancellationToken)
     {
         var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdValue, out var userId))
