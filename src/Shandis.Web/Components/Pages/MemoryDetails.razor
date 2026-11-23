@@ -48,7 +48,7 @@
                 <div class="memory-profile-avatar">@Initials(memory?.Title ?? "Shandis")</div>
                 <div class="memory-profile-main">
                     <div class="memory-profile-kicker">
-                        <span>@(memory.Visibility == 2 ? "PRIVATE MEMORY" : "PUBLIC MEMORY")</span>
+                        <span>@(memory?.Visibility == 2 ? "PRIVATE MEMORY" : "PUBLIC MEMORY")</span>
                         @if (!string.IsNullOrWhiteSpace(memory.CategoryName))
                         {
                             <span>@memory.CategoryName</span>
@@ -318,7 +318,7 @@
                     @foreach (var moment in moments)
                     {
                         <article class="moment-post" @key="moment.Id">
-                            <div class="moment-post-avatar">@Initials(memory.Title)</div>
+                            <div class="moment-post-avatar">@Initials(memory?.Title ?? "Shandis")</div>
                             <div class="moment-post-content">
                                 <div class="moment-post-header">
                                     <strong>Shandis contributor</strong>
