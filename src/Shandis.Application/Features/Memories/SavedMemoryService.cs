@@ -4,8 +4,23 @@ using Shandis.Domain.Entities;
 
 namespace Shandis.Application.Features.Memories;
 
-public sealed class SavedMemoryService(ISavedMemoryRepository repository, IMediaStorageService mediaStorageService) : ISavedMemoryService
+public sealed class SavedMemoryService : ISavedMemoryService
 {
+    private readonly ISavedMemoryRepository repository;
+    private readonly IMediaStorageService? mediaStorageService;
+
+    public SavedMemoryService(ISavedMemoryRepository repository, IMediaStorageService mediaStorageService)
+    {
+        this.repository = repository;
+        this.mediaStorageService = mediaStorageService;
+    }
+
+    // Retained for tests that exercise saved-memory behaviour without storage.
+    public SavedMemoryService(ISavedMemoryRepository repository)
+    {
+        this.repository = repository;
+    }
+
     public async Task<bool> SaveAsync(Guid memoryId, Guid userId, CancellationToken cancellationToken = default)
     {
         ValidateIds(memoryId, userId);
@@ -38,7 +53,7 @@ public sealed class SavedMemoryService(ISavedMemoryRepository repository, IMedia
         var items = await Task.WhenAll(memories.Select(async memory =>
         {
             string? coverImageUrl = null;
-            if (memory.CoverMedia is not null)
+            if (memory.CoverMedia is not null && mediaStorageService is not null)
             {
                 try
                 {
