@@ -106,10 +106,14 @@
                                     <span>· @memory.StartDateUtc.Value.ToLocalTime().ToString("d MMM yyyy")</span>
                                 }
                             </span>
-                            @if (memory.LatestMoment?.Media.FirstOrDefault() is { } mediaPreview &&
-                                 mediaPreview.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                            @if (!string.IsNullOrWhiteSpace(memory.CoverImageUrl))
                             {
-                                <span class="cover-open">@(string.IsNullOrWhiteSpace(memory.CoverImageUrl) ? "Latest moment ↗" : "Open memory ↗")</span>
+                                <span class="cover-open">Open memory ↗</span>
+                            }
+                            else if (memory.LatestMoment?.Media.FirstOrDefault() is { } mediaPreview &&
+                                     mediaPreview.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="cover-open">Latest moment ↗</span>
                             }
                             else
                             {
