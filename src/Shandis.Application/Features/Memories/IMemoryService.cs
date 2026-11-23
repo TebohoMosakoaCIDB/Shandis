@@ -15,6 +15,15 @@ public interface IMemoryService
         UpdateMemoryCommand command,
         CancellationToken cancellationToken = default);
 
+    Task<bool> SetCoverImageAsync(
+        Guid memoryId, Guid ownerId, string fileName, string contentType,
+        long fileSizeBytes, Stream fileStream,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> RemoveCoverImageAsync(
+        Guid memoryId, Guid ownerId,
+        CancellationToken cancellationToken = default);
+
     Task<bool> PublishAsync(
         Guid memoryId,
         Guid requestingUserId,
