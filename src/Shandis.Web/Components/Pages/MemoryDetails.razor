@@ -34,7 +34,7 @@
                 {
                     <div class="cover-art-actions">
                         <label class="cover-upload-button">
-                            @(isUpdatingCover ? "Uploading…" : "Change cover")
+                            @(isUpdatingCover ? "Uploading…" : string.IsNullOrWhiteSpace(memory.CoverImageUrl) ? "Add cover" : "Change cover")
                             <InputFile OnChange="UploadCoverImageAsync" accept="image/jpeg,image/png,image/webp" disabled="@isUpdatingCover" />
                         </label>
                         @if (!string.IsNullOrWhiteSpace(memory.CoverImageUrl))
