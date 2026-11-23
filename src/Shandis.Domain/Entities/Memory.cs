@@ -36,6 +36,8 @@ public class Memory : Entity
 
     public Place? Place { get; private set; }
 
+    public MemoryMedia? CoverMedia { get; private set; }
+
     public ICollection<MemoryMoment> Moments { get; private set; }
         = new List<MemoryMoment>();
 
