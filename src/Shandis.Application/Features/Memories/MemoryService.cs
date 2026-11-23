@@ -214,6 +214,7 @@ public class MemoryService : IMemoryService
             EndDateUtc = memory.EndDateUtc,
             TimeZoneId = memory.TimeZoneId,
             CoverMediaId = memory.CoverMediaId,
+            CoverImageUrl = await GetCoverImageUrlAsync(memory.CoverMedia, cancellationToken),
             CreatedAtUtc = memory.CreatedAtUtc,
             UpdatedAtUtc = memory.UpdatedAtUtc,
             PublishedAtUtc = memory.PublishedAtUtc
