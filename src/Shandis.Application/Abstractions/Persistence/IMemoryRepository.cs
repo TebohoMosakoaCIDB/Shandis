@@ -37,6 +37,14 @@ public interface IMemoryRepository
         Memory memory,
         CancellationToken cancellationToken = default);
 
+    Task<(bool Updated, string? PreviousBlobName)> SetCoverMediaAsync(
+        Guid memoryId, Guid ownerId, MemoryMedia media,
+        CancellationToken cancellationToken = default);
+
+    Task<(bool Removed, string? PreviousBlobName)> RemoveCoverMediaAsync(
+        Guid memoryId, Guid ownerId,
+        CancellationToken cancellationToken = default);
+
 
     Task<(IReadOnlyList<Memory> Items, int TotalCount)> GetSharedWithMeAsync(
         Guid userId,
