@@ -228,6 +228,8 @@ public class MemoryService : IMemoryService
     {
         if (memoryId == Guid.Empty || ownerId == Guid.Empty)
             throw new ArgumentException("Valid Memory and owner IDs are required.");
+        if (string.IsNullOrWhiteSpace(fileName) || string.IsNullOrWhiteSpace(contentType))
+            throw new ArgumentException("An image filename and content type are required.");
         if (fileStream is null || !fileStream.CanRead)
             throw new ArgumentException("A readable image stream is required.", nameof(fileStream));
         if (fileSizeBytes <= 0 || fileSizeBytes > MaxCoverImageSizeBytes)
@@ -253,10 +255,9 @@ public class MemoryService : IMemoryService
 
         var mediaId = Guid.NewGuid();
         var objectPath = $"memories/{memoryId}/cover/{mediaId}{extension}";
-        await storage.UploadAsync(objectPath, fileStream, contentType, cancellationToken);
-
         try
         {
+            await storage.UploadAsync(objectPath, fileStream, contentType, cancellationToken);
             var media = new MemoryMedia(
                 memoryId, ownerId, fileName, objectPath, contentType, fileSizeBytes);
             var result = await _memoryRepository.SetCoverMediaAsync(
