@@ -27,6 +27,7 @@ public sealed class MyMemoryItem
     public DateTime? StartDateUtc { get; set; }
     public DateTime? EndDateUtc { get; set; }
     public Guid? CoverMediaId { get; set; }
+    public string? CoverImageUrl { get; set; }
 }
 
 public sealed class MemoryDetails
@@ -46,6 +47,7 @@ public sealed class MemoryDetails
     public DateTime? EndDateUtc { get; set; }
     public string TimeZoneId { get; set; } = string.Empty;
     public Guid? CoverMediaId { get; set; }
+    public string? CoverImageUrl { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? PublishedAtUtc { get; set; }
 }
