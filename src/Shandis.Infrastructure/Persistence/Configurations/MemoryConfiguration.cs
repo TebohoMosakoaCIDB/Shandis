@@ -63,7 +63,7 @@ public class MemoryConfiguration : IEntityTypeConfiguration<Memory>
         builder.HasIndex(x => new { x.Visibility, x.Status });
         builder.HasIndex(x => x.StartDateUtc);
 
-        builder.HasOne<MomentMedia>()
+        builder.HasOne(x => x.CoverMedia)
             .WithMany()
             .HasForeignKey(x => x.CoverMediaId)
             .OnDelete(DeleteBehavior.Restrict);
