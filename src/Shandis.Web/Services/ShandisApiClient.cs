@@ -128,6 +128,31 @@ public sealed class ShandisApiClient(HttpClient httpClient)
             ?? throw new InvalidOperationException("The Shandis API returned an empty Memory response.");
     }
 
+    public async Task UploadMemoryCoverImageAsync(
+        Guid memoryId, IBrowserFile file,
+        CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var form = new MultipartFormDataContent();
+        var stream = file.OpenReadStream(10 * 1024 * 1024, cancellationToken);
+        var content = new StreamContent(stream);
+        content.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+        form.Add(content, "file", file.Name);
+
+        using var response = await HttpClient.PostAsync(
+            $"api/memories/{memoryId}/cover", form, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
+    public async Task RemoveMemoryCoverImageAsync(
+        Guid memoryId, CancellationToken cancellationToken = default)
+    {
+        await PrepareRequestAsync(cancellationToken);
+        using var response = await HttpClient.DeleteAsync(
+            $"api/memories/{memoryId}/cover", cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+    }
+
     public async Task PublishMemoryAsync(
         Guid memoryId,
         CancellationToken cancellationToken = default)
