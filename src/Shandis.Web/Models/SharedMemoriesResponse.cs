@@ -24,4 +24,5 @@ public sealed class SharedMemoryItem
     public DateTime? StartDateUtc { get; set; }
     public DateTime? EndDateUtc { get; set; }
     public Guid? CoverMediaId { get; set; }
+    public string? CoverImageUrl { get; set; }
 }
