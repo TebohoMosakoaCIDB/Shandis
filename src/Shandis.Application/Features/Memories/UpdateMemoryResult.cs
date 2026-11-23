@@ -36,6 +36,8 @@ public sealed class UpdateMemoryResult
 
     public Guid? CoverMediaId { get; init; }
 
+    public string? CoverImageUrl { get; init; }
+
     public DateTime CreatedAtUtc { get; init; }
 
     public DateTime? UpdatedAtUtc { get; init; }
