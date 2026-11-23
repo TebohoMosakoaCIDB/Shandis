@@ -90,8 +90,7 @@
                                 <span class="cover-wordmark">SHANDIS</span>
                             }
                             @if (!string.IsNullOrWhiteSpace(memory.CoverImageUrl) ||
-                                 memory.LatestMoment?.Media.FirstOrDefault() is { } imageMedia &&
-                                 imageMedia.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                                 memory.LatestMoment?.Media.FirstOrDefault()?.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true)
                             {
                                 <span class="cover-scrim"></span>
                             }
