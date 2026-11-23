@@ -36,6 +36,8 @@ public class MyMemoryItemResponse
 
     public Guid? CoverMediaId { get; set; }
 
+    public string? CoverImageUrl { get; set; }
+
     public DateTime CreatedAtUtc { get; set; }
 
     public DateTime? PublishedAtUtc { get; set; }
