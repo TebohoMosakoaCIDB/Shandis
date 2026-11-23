@@ -28,5 +28,6 @@ public sealed class MemoryMediaConfiguration : IEntityTypeConfiguration<MemoryMe
 
         builder.HasIndex(x => x.MemoryId);
         builder.HasIndex(x => x.UploadedByUserId);
+        builder.HasIndex(x => x.BlobName).IsUnique();
     }
 }
