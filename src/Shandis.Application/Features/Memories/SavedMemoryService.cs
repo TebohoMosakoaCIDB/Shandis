@@ -1,9 +1,10 @@
 using Shandis.Application.Abstractions.Persistence;
+using Shandis.Application.Abstractions.Storage;
 using Shandis.Domain.Entities;
 
 namespace Shandis.Application.Features.Memories;
 
-public sealed class SavedMemoryService(ISavedMemoryRepository repository) : ISavedMemoryService
+public sealed class SavedMemoryService(ISavedMemoryRepository repository, IMediaStorageService mediaStorageService) : ISavedMemoryService
 {
     public async Task<bool> SaveAsync(Guid memoryId, Guid userId, CancellationToken cancellationToken = default)
     {
@@ -34,12 +35,23 @@ public sealed class SavedMemoryService(ISavedMemoryRepository repository) : ISav
         if (pageSize is < 1 or > 50) throw new ArgumentOutOfRangeException(nameof(pageSize));
 
         var (memories, totalCount) = await repository.GetSavedAsync(userId, page, pageSize, cancellationToken);
-        return new SavedMemoriesResult
+        var items = await Task.WhenAll(memories.Select(async memory =>
         {
-            Page = page,
-            PageSize = pageSize,
-            TotalCount = totalCount,
-            Items = memories.Select(memory => new SavedMemoryItemResult
+            string? coverImageUrl = null;
+            if (memory.CoverMedia is not null)
+            {
+                try
+                {
+                    coverImageUrl = await mediaStorageService.CreateSignedUrlAsync(
+                        memory.CoverMedia.BlobName, 3600, cancellationToken);
+                }
+                catch
+                {
+                    // Keep the saved Memory visible if its cover image is unavailable.
+                }
+            }
+
+            return new SavedMemoryItemResult
             {
                 Id = memory.Id,
                 Title = memory.Title,
@@ -48,8 +60,17 @@ public sealed class SavedMemoryService(ISavedMemoryRepository repository) : ISav
                 PlaceName = memory.Place?.Name,
                 Visibility = (int)memory.Visibility,
                 StartDateUtc = memory.StartDateUtc,
-                SavedAtUtc = memory.CreatedAtUtc
-            }).ToList()
+                SavedAtUtc = memory.CreatedAtUtc,
+                CoverImageUrl = coverImageUrl
+            };
+        }));
+
+        return new SavedMemoriesResult
+        {
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            Items = items
         };
     }
 
