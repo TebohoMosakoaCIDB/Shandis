@@ -23,8 +23,26 @@
     {
         <section class="memory-profile">
             <div class="memory-profile-art">
+                @if (!string.IsNullOrWhiteSpace(memory.CoverImageUrl))
+                {
+                    <img class="memory-cover-art-image" src="@memory.CoverImageUrl" alt="@($"{memory.Title} cover image")" />
+                    <span class="memory-cover-art-shade"></span>
+                }
                 <span class="profile-art-mark">✳</span>
                 <span class="profile-art-label">ONE EXPERIENCE. MANY PERSPECTIVES.</span>
+                @if (canManageInvitations)
+                {
+                    <div class="cover-art-actions">
+                        <label class="cover-upload-button">
+                            @(isUpdatingCover ? "Uploading…" : "Change cover")
+                            <InputFile OnChange="UploadCoverImageAsync" accept="image/jpeg,image/png,image/webp" disabled="@isUpdatingCover" />
+                        </label>
+                        @if (!string.IsNullOrWhiteSpace(memory.CoverImageUrl))
+                        {
+                            <button type="button" class="cover-remove-button" @onclick="RemoveCoverImageAsync" disabled="@isUpdatingCover">Remove</button>
+                        }
+                    </div>
+                }
             </div>
             <div class="memory-profile-content">
                 <div class="memory-profile-avatar">@Initials(memory?.Title ?? "Shandis")</div>
@@ -91,6 +109,11 @@
         @if (!string.IsNullOrWhiteSpace(savedMemoryMessage))
         {
             <p class="invitation-feedback">@savedMemoryMessage</p>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(coverImageMessage))
+        {
+            <p class="invitation-feedback @(coverImageIsError ? "is-error" : "is-success")">@coverImageMessage</p>
         }
 
         @if (!string.IsNullOrWhiteSpace(publishMessage))
@@ -546,7 +569,15 @@
     .back-link{display:inline-block;margin:0 0 17px;color:var(--shandis-text-muted);font-size:11px;font-weight:700}
     .back-link:hover{color:var(--shandis-primary)}
     .memory-profile{overflow:hidden;background:var(--shandis-surface);border:1px solid var(--shandis-border);border-radius:18px;box-shadow:var(--shandis-shadow)}
-    .memory-profile-art{height:145px;display:flex;align-items:center;justify-content:space-between;padding:24px 35px;color:#70473D;background:radial-gradient(circle at 75% 20%,rgba(255,255,255,.48),transparent 25%),linear-gradient(120deg,#E7B6A8,#F2D5B9 48%,#B9C9B7)}
+    .memory-profile-art{position:relative;isolation:isolate;height:145px;display:flex;align-items:center;justify-content:space-between;padding:24px 35px;color:#70473D;background:radial-gradient(circle at 75% 20%,rgba(255,255,255,.48),transparent 25%),linear-gradient(120deg,#E7B6A8,#F2D5B9 48%,#B9C9B7)}
+    .memory-cover-art-image,.memory-cover-art-shade{position:absolute;inset:0;width:100%;height:100%}
+    .memory-cover-art-image{z-index:-2;object-fit:cover}
+    .memory-cover-art-shade{z-index:-1;background:linear-gradient(90deg,rgba(0,0,0,.22),rgba(0,0,0,.02))}
+    .memory-profile-art:has(.memory-cover-art-image){color:white}
+    .cover-art-actions{display:flex;align-items:center;gap:7px;margin-left:auto}
+    .cover-upload-button,.cover-remove-button{position:relative;display:inline-flex;align-items:center;padding:8px 11px;border:1px solid rgba(255,255,255,.65);border-radius:8px;background:rgba(30,30,30,.48);color:white;font-size:9px;font-weight:850;cursor:pointer}
+    .cover-upload-button input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+    .cover-remove-button:disabled,.cover-upload-button:has(input:disabled){opacity:.6;cursor:wait}
     .profile-art-mark{font-size:52px;opacity:.8}.profile-art-label{font-size:8px;font-weight:900;letter-spacing:.18em}
     .memory-profile-content{display:flex;align-items:center;gap:20px;padding:0 28px 20px}
     .memory-profile-avatar{display:grid;place-items:center;flex:0 0 90px;width:90px;height:90px;margin-top:-34px;border:5px solid var(--shandis-surface);border-radius:50%;background:var(--shandis-primary-soft);color:var(--shandis-primary);font:850 24px Manrope,sans-serif}
@@ -710,6 +741,9 @@
     private bool isPublishing;
     private bool isMemorySaved;
     private bool isSavingMemory;
+    private bool isUpdatingCover;
+    private string? coverImageMessage;
+    private bool coverImageIsError;
     private string? savedMemoryMessage;
     private string? publishMessage;
     private bool publishIsError;
@@ -767,6 +801,72 @@
             await AuthService.InitializeAsync();
             await LoadMemoryAsync();
             StateHasChanged();
+        }
+    }
+
+    private async Task UploadCoverImageAsync(InputFileChangeEventArgs args)
+    {
+        if (memory is null || !canManageInvitations || isUpdatingCover)
+            return;
+
+        var file = args.File;
+        coverImageMessage = null;
+        coverImageIsError = false;
+
+        if (file.Size <= 0 || file.Size > 10 * 1024 * 1024)
+        {
+            coverImageMessage = "Choose an image smaller than 10 MB.";
+            coverImageIsError = true;
+            return;
+        }
+
+        if (file.ContentType is not ("image/jpeg" or "image/png" or "image/webp"))
+        {
+            coverImageMessage = "Cover images must be JPG, PNG or WebP files.";
+            coverImageIsError = true;
+            return;
+        }
+
+        isUpdatingCover = true;
+        try
+        {
+            await ApiClient.UploadMemoryCoverImageAsync(MemoryId, file);
+            memory = await ApiClient.GetMemoryAsync(MemoryId);
+            coverImageMessage = "Memory cover image updated.";
+        }
+        catch (Exception)
+        {
+            coverImageMessage = "We couldn't upload that cover image. Please try again.";
+            coverImageIsError = true;
+        }
+        finally
+        {
+            isUpdatingCover = false;
+        }
+    }
+
+    private async Task RemoveCoverImageAsync()
+    {
+        if (memory is null || !canManageInvitations || isUpdatingCover)
+            return;
+
+        isUpdatingCover = true;
+        coverImageMessage = null;
+        coverImageIsError = false;
+        try
+        {
+            await ApiClient.RemoveMemoryCoverImageAsync(MemoryId);
+            memory = await ApiClient.GetMemoryAsync(MemoryId);
+            coverImageMessage = "Memory cover image removed.";
+        }
+        catch (Exception)
+        {
+            coverImageMessage = "We couldn't remove the cover image. Please try again.";
+            coverImageIsError = true;
+        }
+        finally
+        {
+            isUpdatingCover = false;
         }
     }
 
