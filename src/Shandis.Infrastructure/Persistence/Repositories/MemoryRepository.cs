@@ -219,6 +219,7 @@ public class MemoryRepository : IMemoryRepository
             .Include(x => x.Category)
             .Include(x => x.Place)
             .Include(x => x.Participants)
+            .Include(x => x.CoverMedia)
             .OrderByDescending(x => x.CreatedAtUtc)
             .ThenByDescending(x => x.Id)
             .Skip((page - 1) * pageSize)
