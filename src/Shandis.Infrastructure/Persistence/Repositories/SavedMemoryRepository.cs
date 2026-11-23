@@ -51,7 +51,7 @@ public sealed class SavedMemoryRepository(IDbContextFactory<ShandisDbContext> co
         var totalCount = await query.CountAsync(cancellationToken);
         var items = await query.Skip((page - 1) * pageSize).Take(pageSize)
             .Select(s => s.Memory)
-            .Include(m => m.Category).Include(m => m.Place)
+            .Include(m => m.Category).Include(m => m.Place).Include(m => m.CoverMedia)
             .ToListAsync(cancellationToken);
         return (items, totalCount);
     }
