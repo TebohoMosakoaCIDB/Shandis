@@ -159,12 +159,13 @@ public class MemoryRepository : IMemoryRepository
         if (memory is null)
             return (false, null);
 
-        var previousBlobName = memory.CoverMedia?.BlobName;
+        var previousMedia = memory.CoverMedia;
+        var previousBlobName = previousMedia?.BlobName;
         memory.SetCoverMedia(media.Id);
         dbContext.MemoryMedia.Add(media);
 
-        if (memory.CoverMedia is not null)
-            dbContext.MemoryMedia.Remove(memory.CoverMedia);
+        if (previousMedia is not null)
+            dbContext.MemoryMedia.Remove(previousMedia);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return (true, previousBlobName);
