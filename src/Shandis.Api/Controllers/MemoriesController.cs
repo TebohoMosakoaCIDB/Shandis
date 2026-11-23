@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using Shandis.Api.Contracts.Memories;
 using Shandis.Application.Features.Memories;
 using Shandis.Domain.Enums;
@@ -91,6 +92,60 @@ public class MemoriesController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
+    }
+
+    [HttpPost("{id:guid}/cover")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(12 * 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 12 * 1024 * 1024)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UploadCoverImage(
+        Guid id, [FromForm] IFormFile file, CancellationToken cancellationToken)
+    {
+        var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdValue, out var userId))
+            return Unauthorized();
+
+        if (file is null || file.Length <= 0)
+            return BadRequest(new { message = "Choose an image to upload." });
+
+        await using var stream = file.OpenReadStream();
+        try
+        {
+            var updated = await _memoryService.SetCoverImageAsync(
+                id, userId, file.FileName, file.ContentType,
+                file.Length, stream, cancellationToken);
+
+            return updated ? NoContent() : NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id:guid}/cover")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemoveCoverImage(
+        Guid id, CancellationToken cancellationToken)
+    {
+        var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdValue, out var userId))
+            return Unauthorized();
+
+        var removed = await _memoryService.RemoveCoverImageAsync(
+            id, userId, cancellationToken);
+
+        return removed ? NoContent() : NotFound();
     }
 
     [HttpPost("{id:guid}/publish")]
