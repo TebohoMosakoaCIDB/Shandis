@@ -21,6 +21,8 @@ public class ShandisDbContext
 
     public DbSet<MomentMedia> MomentMedia => Set<MomentMedia>();
 
+    public DbSet<MemoryMedia> MemoryMedia => Set<MemoryMedia>();
+
     public DbSet<MemoryParticipant> MemoryParticipants => Set<MemoryParticipant>();
 
     public DbSet<MemoryInvitation> MemoryInvitations => Set<MemoryInvitation>();
