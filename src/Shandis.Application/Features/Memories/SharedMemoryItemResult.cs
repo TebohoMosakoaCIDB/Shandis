@@ -20,6 +20,7 @@ public sealed class SharedMemoryItemResult
     public DateTime? EndDateUtc { get; init; }
     public string TimeZoneId { get; init; } = string.Empty;
     public Guid? CoverMediaId { get; init; }
+    public string? CoverImageUrl { get; init; }
     public DateTime CreatedAtUtc { get; init; }
     public DateTime? PublishedAtUtc { get; init; }
 }
