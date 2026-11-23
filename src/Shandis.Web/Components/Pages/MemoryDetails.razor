@@ -22,7 +22,7 @@
     else if (memory is not null)
     {
         <section class="memory-profile">
-            <div class="memory-profile-art">
+            <div class="memory-profile-art @(string.IsNullOrWhiteSpace(memory.CoverImageUrl) ? "" : "has-cover-image")">
                 @if (!string.IsNullOrWhiteSpace(memory.CoverImageUrl))
                 {
                     <img class="memory-cover-art-image" src="@memory.CoverImageUrl" alt="@($"{memory.Title} cover image")" />
@@ -573,7 +573,7 @@
     .memory-cover-art-image,.memory-cover-art-shade{position:absolute;inset:0;width:100%;height:100%}
     .memory-cover-art-image{z-index:-2;object-fit:cover}
     .memory-cover-art-shade{z-index:-1;background:linear-gradient(90deg,rgba(0,0,0,.22),rgba(0,0,0,.02))}
-    .memory-profile-art:has(.memory-cover-art-image){color:white}
+    .memory-profile-art.has-cover-image{color:white}
     .cover-art-actions{display:flex;align-items:center;gap:7px;margin-left:auto}
     .cover-upload-button,.cover-remove-button{position:relative;display:inline-flex;align-items:center;padding:8px 11px;border:1px solid rgba(255,255,255,.65);border-radius:8px;background:rgba(30,30,30,.48);color:white;font-size:9px;font-weight:850;cursor:pointer}
     .cover-upload-button input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
