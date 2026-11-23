@@ -1,5 +1,6 @@
 ﻿
 using Shandis.Application.Abstractions.Persistence;
+using Shandis.Application.Abstractions.Storage;
 using Shandis.Domain.Entities;
 using Shandis.Domain.Enums;
 
@@ -7,8 +8,18 @@ namespace Shandis.Application.Features.Memories;
 
 public class MemoryService : IMemoryService
 {
-    private readonly IMemoryRepository _memoryRepository;
+    private const long MaxCoverImageSizeBytes = 10 * 1024 * 1024;
 
+    private readonly IMemoryRepository _memoryRepository;
+    private readonly IMediaStorageService? _mediaStorageService;
+
+    public MemoryService(IMemoryRepository memoryRepository, IMediaStorageService mediaStorageService)
+    {
+        _memoryRepository = memoryRepository;
+        _mediaStorageService = mediaStorageService;
+    }
+
+    // Retained for unit tests and consumers that only exercise non-storage operations.
     public MemoryService(IMemoryRepository memoryRepository)
     {
         _memoryRepository = memoryRepository;
@@ -128,6 +139,7 @@ public class MemoryService : IMemoryService
             EndDateUtc = memory.EndDateUtc,
             TimeZoneId = memory.TimeZoneId,
             CoverMediaId = memory.CoverMediaId,
+            CoverImageUrl = await GetCoverImageUrlAsync(memory.CoverMedia, cancellationToken),
             CreatedAtUtc = memory.CreatedAtUtc,
             PublishedAtUtc = memory.PublishedAtUtc
         };
@@ -206,6 +218,114 @@ public class MemoryService : IMemoryService
             UpdatedAtUtc = memory.UpdatedAtUtc,
             PublishedAtUtc = memory.PublishedAtUtc
         };
+    }
+
+    public async Task<bool> SetCoverImageAsync(
+        Guid memoryId, Guid ownerId, string fileName, string contentType,
+        long fileSizeBytes, Stream fileStream,
+        CancellationToken cancellationToken = default)
+    {
+        if (memoryId == Guid.Empty || ownerId == Guid.Empty)
+            throw new ArgumentException("Valid Memory and owner IDs are required.");
+        if (fileStream is null || !fileStream.CanRead)
+            throw new ArgumentException("A readable image stream is required.", nameof(fileStream));
+        if (fileSizeBytes <= 0 || fileSizeBytes > MaxCoverImageSizeBytes)
+            throw new InvalidOperationException("A cover image must be larger than zero and no larger than 10 MB.");
+
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        var valid = (contentType.ToLowerInvariant(), extension) switch
+        {
+            ("image/jpeg", ".jpg" or ".jpeg") => true,
+            ("image/png", ".png") => true,
+            ("image/webp", ".webp") => true,
+            _ => false
+        };
+        if (!valid)
+            throw new InvalidOperationException("Cover images must be JPG, PNG or WebP files.");
+
+        var memory = await _memoryRepository.GetByIdAsync(memoryId, cancellationToken);
+        if (memory is null || memory.OwnerId != ownerId)
+            return false;
+
+        var storage = _mediaStorageService
+            ?? throw new InvalidOperationException("Media storage is not configured.");
+
+        var mediaId = Guid.NewGuid();
+        var objectPath = $"memories/{memoryId}/cover/{mediaId}{extension}";
+        await storage.UploadAsync(objectPath, fileStream, contentType, cancellationToken);
+
+        try
+        {
+            var media = new MemoryMedia(
+                memoryId, ownerId, fileName, objectPath, contentType, fileSizeBytes);
+            var result = await _memoryRepository.SetCoverMediaAsync(
+                memoryId, ownerId, media, cancellationToken);
+
+            if (!result.Updated)
+            {
+                await TryDeleteStorageObjectAsync(objectPath);
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(result.PreviousBlobName))
+                await TryDeleteStorageObjectAsync(result.PreviousBlobName);
+
+            return true;
+        }
+        catch
+        {
+            await TryDeleteStorageObjectAsync(objectPath);
+            throw;
+        }
+    }
+
+    public async Task<bool> RemoveCoverImageAsync(
+        Guid memoryId, Guid ownerId,
+        CancellationToken cancellationToken = default)
+    {
+        if (memoryId == Guid.Empty || ownerId == Guid.Empty)
+            throw new ArgumentException("Valid Memory and owner IDs are required.");
+
+        var result = await _memoryRepository.RemoveCoverMediaAsync(
+            memoryId, ownerId, cancellationToken);
+
+        if (!result.Removed)
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(result.PreviousBlobName))
+            await TryDeleteStorageObjectAsync(result.PreviousBlobName);
+
+        return true;
+    }
+
+    private async Task<string?> GetCoverImageUrlAsync(
+        MemoryMedia? media, CancellationToken cancellationToken)
+    {
+        if (media is null || _mediaStorageService is null)
+            return null;
+
+        try
+        {
+            return await _mediaStorageService.CreateSignedUrlAsync(
+                media.BlobName, 3600, cancellationToken);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task TryDeleteStorageObjectAsync(string objectPath)
+    {
+        try
+        {
+            if (_mediaStorageService is not null)
+                await _mediaStorageService.DeleteAsync(objectPath);
+        }
+        catch
+        {
+            // Storage cleanup failures do not undo a successfully saved Memory cover.
+        }
     }
 
     public async Task<bool> PublishAsync(
@@ -305,7 +425,7 @@ public class MemoryService : IMemoryService
                 pageSize,
                 cancellationToken);
 
-        var items = memories.Select(memory => new MyMemoryItemResult
+        var items = await Task.WhenAll(memories.Select(async memory => new MyMemoryItemResult
         {
             Id = memory.Id,
             Title = memory.Title,
@@ -323,9 +443,10 @@ public class MemoryService : IMemoryService
             EndDateUtc = memory.EndDateUtc,
             TimeZoneId = memory.TimeZoneId,
             CoverMediaId = memory.CoverMediaId,
+            CoverImageUrl = await GetCoverImageUrlAsync(memory.CoverMedia, cancellationToken),
             CreatedAtUtc = memory.CreatedAtUtc,
             PublishedAtUtc = memory.PublishedAtUtc
-        }).ToList();
+        }));
 
         return new MyMemoriesResult
         {
@@ -365,7 +486,7 @@ public class MemoryService : IMemoryService
                 pageSize,
                 cancellationToken);
 
-        var items = memories.Select(memory =>
+        var items = await Task.WhenAll(memories.Select(async memory =>
         {
             var participant = memory.Participants
                 .First(x =>
@@ -393,10 +514,11 @@ public class MemoryService : IMemoryService
                 EndDateUtc = memory.EndDateUtc,
                 TimeZoneId = memory.TimeZoneId,
                 CoverMediaId = memory.CoverMediaId,
+                CoverImageUrl = await GetCoverImageUrlAsync(memory.CoverMedia, cancellationToken),
                 CreatedAtUtc = memory.CreatedAtUtc,
                 PublishedAtUtc = memory.PublishedAtUtc
             };
-        }).ToList();
+        }));
 
         return new SharedMemoriesResult
         {
