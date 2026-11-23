@@ -40,6 +40,17 @@
                     <small>Give your contributors a little context.</small>
                 </div>
 
+                <div class="field-group cover-upload-field">
+                    <label for="memory-cover">Memory cover image</label>
+                    <InputFile id="memory-cover" OnChange="SelectCoverImage"
+                               accept="image/jpeg,image/png,image/webp" />
+                    <small>Choose a JPG, PNG or WebP image (maximum 10 MB). You can change it later.</small>
+                    @if (coverImage is not null)
+                    {
+                        <div class="selected-cover-file">Selected: <strong>@coverImage.Name</strong> · @FormatFileSize(coverImage.Size)</div>
+                    }
+                </div>
+
                 <div class="section-divider"></div>
                 <div class="section-intro">
                     <span class="section-number">02</span>
@@ -121,10 +132,14 @@
                     }
                     else
                     {
-                        <span>Create Memory</span><span>→</span>
+                        <span>@(createdMemoryId.HasValue ? "Retry cover upload" : coverImage is null ? "Create Memory" : "Create Memory and upload cover")</span><span>→</span>
                     }
                 </button>
                 <p class="submit-note">You can edit the details and privacy settings later.</p>
+                @if (createdMemoryId.HasValue)
+                {
+                    <a class="continue-without-cover" href="@($"/memories/{createdMemoryId.Value}")">Open Memory without a cover image</a>
+                }
             </aside>
         </div>
     </EditForm>
@@ -164,6 +179,10 @@
     .choice-copy strong{font-size:11px}.choice-copy small{color:var(--shandis-text-muted);font-size:9px;line-height:1.4}
     .policy-field{margin:16px 0 0}
     .private-note{margin:13px 0 0;padding:11px;border-radius:9px;background:var(--shandis-background);color:var(--shandis-text-muted);font-size:9px;line-height:1.6}
+    .cover-upload-field input{font-size:10px;color:var(--shandis-text-muted)}
+    .selected-cover-file{padding:9px 10px;border-radius:8px;background:var(--shandis-primary-soft);color:var(--shandis-text-muted);font-size:9px;overflow-wrap:anywhere}
+    .selected-cover-file strong{color:var(--shandis-text)}
+    .continue-without-cover{display:block;text-align:center;color:var(--shandis-text-muted);font-size:9px;text-decoration:underline}
     .create-aside{display:grid;gap:13px}
     .preview-card{overflow:hidden}
     .preview-art{height:135px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:linear-gradient(135deg,#E9B8A7,#F4D8C2 52%,#C6D6C6);color:#49342E}
@@ -195,6 +214,8 @@
     private DateTime? endDate;
     private bool isSaving;
     private string? errorMessage;
+    private IBrowserFile? coverImage;
+    private Guid? createdMemoryId;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -208,6 +229,12 @@
             return;
 
         errorMessage = null;
+
+        if (createdMemoryId.HasValue)
+        {
+            await UploadCoverAndOpenAsync();
+            return;
+        }
 
         if (startDate.HasValue && endDate.HasValue && endDate.Value.Date < startDate.Value.Date)
         {
@@ -226,6 +253,14 @@
         try
         {
             var created = await ApiClient.CreateMemoryAsync(model);
+            createdMemoryId = created.Id;
+
+            if (coverImage is not null)
+            {
+                await UploadCoverAndOpenAsync();
+                return;
+            }
+
             Navigation.NavigateTo($"/memories/{created.Id}");
         }
         catch (HttpRequestException ex)
@@ -245,6 +280,60 @@
             isSaving = false;
         }
     }
+
+    private void SelectCoverImage(InputFileChangeEventArgs args)
+    {
+        errorMessage = null;
+        var file = args.File;
+
+        if (file.Size <= 0 || file.Size > 10 * 1024 * 1024)
+        {
+            coverImage = null;
+            errorMessage = "Choose an image smaller than 10 MB.";
+            return;
+        }
+
+        if (file.ContentType is not ("image/jpeg" or "image/png" or "image/webp"))
+        {
+            coverImage = null;
+            errorMessage = "Cover images must be JPG, PNG or WebP files.";
+            return;
+        }
+
+        coverImage = file;
+    }
+
+    private async Task UploadCoverAndOpenAsync()
+    {
+        if (!createdMemoryId.HasValue)
+            return;
+
+        if (coverImage is null)
+        {
+            Navigation.NavigateTo($"/memories/{createdMemoryId.Value}");
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            await ApiClient.UploadMemoryCoverImageAsync(createdMemoryId.Value, coverImage);
+            Navigation.NavigateTo($"/memories/{createdMemoryId.Value}");
+        }
+        catch (Exception)
+        {
+            errorMessage = "Your Memory was created, but the cover image couldn't be uploaded. Try again or open the Memory and add its cover later.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static string FormatFileSize(long bytes)
+        => bytes < 1024 * 1024
+            ? $"{bytes / 1024d:0} KB"
+            : $"{bytes / (1024d * 1024d):0.0} MB";
 
     private static DateTimeOffset? ToSouthAfricanDate(DateTime? value)
     {
