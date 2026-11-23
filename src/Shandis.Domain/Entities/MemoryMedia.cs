@@ -37,9 +37,13 @@ public sealed class MemoryMedia : Entity
         if (fileSizeBytes <= 0)
             throw new ArgumentOutOfRangeException(nameof(fileSizeBytes));
 
+        var safeFileName = Path.GetFileName(fileName.Trim());
+        if (safeFileName.Length > 255)
+            throw new ArgumentException("The image filename cannot exceed 255 characters.", nameof(fileName));
+
         MemoryId = memoryId;
         UploadedByUserId = uploadedByUserId;
-        FileName = Path.GetFileName(fileName.Trim());
+        FileName = safeFileName;
         BlobName = blobName;
         ContentType = contentType.Trim();
         FileSizeBytes = fileSizeBytes;
