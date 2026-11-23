@@ -19,6 +19,7 @@ public sealed class SavedMemoryItem
     public int Visibility { get; set; }
     public DateTime? StartDateUtc { get; set; }
     public DateTime SavedAtUtc { get; set; }
+    public string? CoverImageUrl { get; set; }
 }
 
 public sealed class SavedMemoryStatus
