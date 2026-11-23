@@ -30,7 +30,7 @@
                 }
                 <span class="profile-art-mark">✳</span>
                 <span class="profile-art-label">ONE EXPERIENCE. MANY PERSPECTIVES.</span>
-                @if (canManageInvitations)
+                @if (memory.MyRole == 1)
                 {
                     <div class="cover-art-actions">
                         <label class="cover-upload-button">
@@ -806,7 +806,7 @@
 
     private async Task UploadCoverImageAsync(InputFileChangeEventArgs args)
     {
-        if (memory is null || !canManageInvitations || isUpdatingCover)
+        if (memory is null || memory.MyRole != 1 || isUpdatingCover)
             return;
 
         var file = args.File;
