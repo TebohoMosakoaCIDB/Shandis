@@ -169,6 +169,7 @@ public class MemoriesController : ControllerBase
             EndDateUtc = result.EndDateUtc,
             TimeZoneId = result.TimeZoneId,
             CoverMediaId = result.CoverMediaId,
+            CoverImageUrl = result.CoverImageUrl,
             CreatedAtUtc = result.CreatedAtUtc,
             PublishedAtUtc = result.PublishedAtUtc
         };
@@ -349,6 +350,7 @@ public class MemoriesController : ControllerBase
                     EndDateUtc = memory.EndDateUtc,
                     TimeZoneId = memory.TimeZoneId,
                     CoverMediaId = memory.CoverMediaId,
+                    CoverImageUrl = memory.CoverImageUrl,
                     CreatedAtUtc = memory.CreatedAtUtc,
                     PublishedAtUtc = memory.PublishedAtUtc
                 }).ToList()
