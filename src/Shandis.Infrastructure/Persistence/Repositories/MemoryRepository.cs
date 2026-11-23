@@ -72,6 +72,7 @@ public class MemoryRepository : IMemoryRepository
             .Include(x => x.Category)
             .Include(x => x.Place)
             .Include(x => x.Participants)
+            .Include(x => x.CoverMedia)
             .FirstOrDefaultAsync(
                 x => x.Id == memoryId && x.DeletedAtUtc == null,
                 cancellationToken);
@@ -121,6 +122,7 @@ public class MemoryRepository : IMemoryRepository
             .Include(x => x.Category)
             .Include(x => x.Place)
             .Include(x => x.Participants)
+            .Include(x => x.CoverMedia)
             .OrderByDescending(x => x.CreatedAtUtc)
             .ThenByDescending(x => x.Id)
             .Skip((page - 1) * pageSize)
@@ -144,6 +146,52 @@ public class MemoryRepository : IMemoryRepository
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+
+    public async Task<(bool Updated, string? PreviousBlobName)> SetCoverMediaAsync(
+        Guid memoryId, Guid ownerId, MemoryMedia media,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var memory = await dbContext.Memories
+            .Include(x => x.CoverMedia)
+            .FirstOrDefaultAsync(x => x.Id == memoryId && x.OwnerId == ownerId && x.DeletedAtUtc == null, cancellationToken);
+
+        if (memory is null)
+            return (false, null);
+
+        var previousBlobName = memory.CoverMedia?.BlobName;
+        memory.SetCoverMedia(media.Id);
+        dbContext.MemoryMedia.Add(media);
+
+        if (memory.CoverMedia is not null)
+            dbContext.MemoryMedia.Remove(memory.CoverMedia);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return (true, previousBlobName);
+    }
+
+    public async Task<(bool Removed, string? PreviousBlobName)> RemoveCoverMediaAsync(
+        Guid memoryId, Guid ownerId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var memory = await dbContext.Memories
+            .Include(x => x.CoverMedia)
+            .FirstOrDefaultAsync(x => x.Id == memoryId && x.OwnerId == ownerId && x.DeletedAtUtc == null, cancellationToken);
+
+        if (memory is null)
+            return (false, null);
+
+        var previousMedia = memory.CoverMedia;
+        var previousBlobName = previousMedia?.BlobName;
+        memory.SetCoverMedia(null);
+
+        if (previousMedia is not null)
+            dbContext.MemoryMedia.Remove(previousMedia);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return (true, previousBlobName);
+    }
 
     public async Task<(IReadOnlyList<Memory> Items, int TotalCount)> GetSharedWithMeAsync(
         Guid userId,
